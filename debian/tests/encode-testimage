@@ -1,0 +1,14 @@
+#!/bin/sh
+# autopkgtest check: Use avprobe to produce a 10s test image,
+# and use x264 to encode to H.264 high profile
+
+set -e
+
+WORKDIR=$(mktemp -d)
+trap "rm -rf $WORKDIR" 0 INT QUIT ABRT PIPE TERM
+cd $WORKDIR
+
+avconv -y -filter_complex testsrc -t 10s in.avi
+x264 --crf 24 -o out.mkv in.avi
+avprobe -of ini -show_streams out.mkv | tee avprobe.txt
+grep ^profile=High avprobe.txt
