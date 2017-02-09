@@ -1,4 +1,4 @@
-x264 (2:0.148.2728+git4d5c8b0-1+rpi1) stretch-staging; urgency=medium
+x264 (2:0.148.2748+git97eaef2-1+rpi1) stretch-staging; urgency=medium
 
   [Changes introduced in 2:0.142.2431+gita5831aa-1+rpi2 by Peter Michael Green]
   * Revert previous raspbian changes (not all of which were mentioned
@@ -6,7 +6,15 @@ x264 (2:0.148.2728+git4d5c8b0-1+rpi1) stretch-staging; urgency=medium
   * Pass --disable-asm for static build to prevent it being
     armv7/neon contaminated.
 
- -- Raspbian forward porter <root@raspbian.org>  Wed, 21 Dec 2016 15:31:14 +0000
+ -- Raspbian forward porter <root@raspbian.org>  Thu, 09 Feb 2017 14:48:07 +0000
+
+x264 (2:0.148.2748+git97eaef2-1) unstable; urgency=medium
+
+  * Update to new stable upstream
+  * New upstream version 0.148.2748+git97eaef2
+  * Regenerate manpage
+
+ -- Rico Tzschichholz <ricotz@ubuntu.com>  Wed, 25 Jan 2017 10:40:48 +0100
 
 x264 (2:0.148.2728+git4d5c8b0-1) unstable; urgency=medium
 
