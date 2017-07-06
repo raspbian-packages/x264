@@ -1,7 +1,7 @@
 ;*****************************************************************************
 ;* pixel.asm: x86 pixel metrics
 ;*****************************************************************************
-;* Copyright (C) 2003-2016 x264 project
+;* Copyright (C) 2003-2017 x264 project
 ;*
 ;* Authors: Loren Merritt <lorenm@u.washington.edu>
 ;*          Holger Lubitz <holger@lubitz.org>
@@ -421,7 +421,7 @@ cglobal pixel_ssd_%1x%2, 0,0,0
     mov     al, %1*%2/mmsize/2
 
 %if %1 != %2
-    jmp mangle(x264_pixel_ssd_%1x%1 %+ SUFFIX %+ .startloop)
+    jmp mangle(private_prefix %+ _pixel_ssd_%1x%1 %+ SUFFIX %+ .startloop)
 %else
 
 .startloop:
@@ -4867,7 +4867,7 @@ ASD8
     add     r6, 4*%1
     sub    r0d, 4*%1
     jg .loop
-    WIN64_RESTORE_XMM rsp
+    WIN64_RESTORE_XMM
 %if mmsize==32
     vzeroupper
 %endif

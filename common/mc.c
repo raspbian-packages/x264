@@ -1,7 +1,7 @@
 /*****************************************************************************
  * mc.c: motion compensation
  *****************************************************************************
- * Copyright (C) 2003-2016 x264 project
+ * Copyright (C) 2003-2017 x264 project
  *
  * Authors: Laurent Aimar <fenrir@via.ecp.fr>
  *          Loren Merritt <lorenm@u.washington.edu>
@@ -362,9 +362,9 @@ static ALWAYS_INLINE uint32_t v210_endian_fix32( uint32_t x )
 #define v210_endian_fix32(x) (x)
 #endif
 
-void x264_plane_copy_deinterleave_v210_c( pixel *dsty, intptr_t i_dsty,
-                                          pixel *dstc, intptr_t i_dstc,
-                                          uint32_t *src, intptr_t i_src, int w, int h )
+static void x264_plane_copy_deinterleave_v210_c( pixel *dsty, intptr_t i_dsty,
+                                                 pixel *dstc, intptr_t i_dstc,
+                                                 uint32_t *src, intptr_t i_src, int w, int h )
 {
     for( int l = 0; l < h; l++ )
     {
@@ -676,7 +676,7 @@ void x264_mc_init( int cpu, x264_mc_functions_t *pf, int cpu_independent )
 #endif
 #if HAVE_ALTIVEC
     if( cpu&X264_CPU_ALTIVEC )
-        x264_mc_altivec_init( pf );
+        x264_mc_init_altivec( pf );
 #endif
 #if HAVE_ARMV6
     x264_mc_init_arm( cpu, pf );

@@ -1,7 +1,7 @@
 /*****************************************************************************
  * mc.S: arm motion compensation
  *****************************************************************************
- * Copyright (C) 2009-2016 x264 project
+ * Copyright (C) 2009-2017 x264 project
  *
  * Authors: David Conrad <lessen42@gmail.com>
  *          Mans Rullgard <mans@mansr.com>
@@ -28,10 +28,9 @@
 
 #include "asm.S"
 
-.section .rodata
-.align 4
-pw_0to15:
+const pw_0to15, align=4
 .short 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15
+endconst
 
 .text
 
@@ -140,7 +139,7 @@ MEMCPY_ALIGNED 16, 8
 MEMCPY_ALIGNED  8, 16
 MEMCPY_ALIGNED  8, 8
 
-const memcpy_table align=2, relocate=1
+const memcpy_table, align=2, relocate=1
 .word memcpy_aligned_16_16_neon
 .word memcpy_aligned_16_8_neon
 .word memcpy_aligned_8_16_neon
@@ -1652,7 +1651,7 @@ endfunc
     vadd.u16        q0,  q0,  q2
 .endm
 
-function integral_init4h_neon
+function x264_integral_init4h_neon
     sub             r3,  r0,  r2, lsl #1
     vld1.8          {d6, d7}, [r1, :128]!
 1:
@@ -1687,7 +1686,7 @@ endfunc
     vadd.u16        q0,  q0,   \s
 .endm
 
-function integral_init8h_neon
+function x264_integral_init8h_neon
     sub             r3,  r0,  r2, lsl #1
     vld1.8          {d16, d17}, [r1, :128]!
 1:
@@ -1704,7 +1703,7 @@ function integral_init8h_neon
     bx              lr
 endfunc
 
-function integral_init4v_neon
+function x264_integral_init4v_neon
     push            {r4-r5}
     mov             r3,   r0
     add             r4,   r0,   r2,  lsl #3
@@ -1743,7 +1742,7 @@ function integral_init4v_neon
     bx              lr
 endfunc
 
-function integral_init8v_neon
+function x264_integral_init8v_neon
     add             r2,  r0,  r1,  lsl #4
     sub             r1,  r1,  #8
     ands            r3,  r1,  #16 - 1

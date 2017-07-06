@@ -14,7 +14,7 @@ Build-Depends:
  libffms2-dev <!stage1>,
  libgpac-dev (>= 0.5.0+svn4288~) <!stage1>,
  yasm [any-i386 any-amd64]
-Standards-Version: 3.9.8
+Standards-Version: 4.0.0
 Vcs-Git: https://anonscm.debian.org/git/pkg-multimedia/x264.git
 Vcs-Browser: https://anonscm.debian.org/cgit/pkg-multimedia/x264.git
 Homepage: http://www.videolan.org/developers/x264.html
