@@ -684,6 +684,10 @@ esac
 
 LDFLAGS="$LDFLAGS $libm"
 
+case `$CC -dumpmachine` in
+    *gnux32) host_cpu=x32
+esac
+
 stack_alignment=4
 case $host_cpu in
     i*86)
@@ -739,6 +743,10 @@ case $host_cpu in
         else
             ASFLAGS="$ASFLAGS -f elf64"
         fi
+        ;;
+    x32)
+        ARCH="X32"
+        CFLAGS="$CFLAGS -fPIC"
         ;;
     powerpc*)
         ARCH="PPC"
