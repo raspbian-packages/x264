@@ -1,0 +1,3 @@
+Tests: encode-testimage
+Depends: ffmpeg, x264
+Restrictions: allow-stderr
