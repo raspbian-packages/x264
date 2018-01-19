@@ -1,0 +1,40 @@
+Description: Properly detect x32.
+ As usually, x32 gets mistaken for amd64 (both are x86-64 ABIs after all).
+ This version doesn't use any assembly yet, a proper port is needed.
+Author: Adam Borowski <kilobyte@angband.pl>
+
+--- x264-0.142.2431+gita5831aa.orig/common/common.h
++++ x264-0.142.2431+gita5831aa/common/common.h
+@@ -1010,7 +1010,7 @@ static int ALWAYS_INLINE x264_predictor_
+     return cnt;
+ }
+ 
+-#if ARCH_X86 || ARCH_X86_64
++#if ARCH_X86 || ARCH_X86_64 || ARCH_X32
+ #include "x86/util.h"
+ #endif
+ 
+--- x264-0.142.2431+gita5831aa.orig/configure
++++ x264-0.142.2431+gita5831aa/configure
+@@ -556,6 +556,10 @@ esac
+ 
+ LDFLAGS="$LDFLAGS $libm"
+ 
++case `$CC -dumpmachine` in
++    *gnux32) host_cpu=x32
++esac
++
+ stack_alignment=4
+ case $host_cpu in
+     i*86)
+@@ -617,6 +621,10 @@ case $host_cpu in
+             ASFLAGS="$ASFLAGS -f elf64"
+         fi
+         ;;
++    x32)
++        ARCH="X32"
++        CFLAGS="$CFLAGS -fPIC"
++        ;;
+     powerpc*)
+         ARCH="PPC"
+         if [ $asm = auto ] ; then
