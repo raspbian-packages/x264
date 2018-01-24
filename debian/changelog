@@ -1,4 +1,4 @@
-x264 (2:0.148.2795+gitaaa9aa8-1+rpi1) buster-staging; urgency=medium
+x264 (2:0.152.2854+gite9a5903-2+rpi1) buster-staging; urgency=medium
 
   [Changes introduced in 2:0.142.2431+gita5831aa-1+rpi2 by Peter Michael Green]
   * Revert previous raspbian changes (not all of which were mentioned
@@ -6,7 +6,30 @@ x264 (2:0.148.2795+gitaaa9aa8-1+rpi1) buster-staging; urgency=medium
   * Pass --disable-asm for static build to prevent it being
     armv7/neon contaminated.
 
- -- Raspbian forward porter <root@raspbian.org>  Thu, 06 Jul 2017 20:44:46 +0000
+ -- Raspbian forward porter <root@raspbian.org>  Wed, 24 Jan 2018 08:15:39 +0000
+
+x264 (2:0.152.2854+gite9a5903-2) unstable; urgency=medium
+
+  * Team upload.
+  * Upload to unstable.
+
+ -- Sebastian Ramacher <sramacher@debian.org>  Fri, 19 Jan 2018 12:36:28 +0100
+
+x264 (2:0.152.2854+gite9a5903-1) experimental; urgency=medium
+
+  [ Rico Tzschichholz ]
+  * Update to new stable upstream
+  * New upstream version 0.152.2854+gite9a5903
+  * Require nasm (>= 2.13) instead of yasm
+  * Update debian/control for soname bump
+  * Regenerate manpage
+
+  [ Sebastian Ramacher ]
+  * debian/control:
+    - Bump Standards-Version.
+    - Remove obsolete Pre-Depends.
+
+ -- Rico Tzschichholz <ricotz@ubuntu.com>  Fri, 05 Jan 2018 12:14:48 +0100
 
 x264 (2:0.148.2795+gitaaa9aa8-1) unstable; urgency=medium
 

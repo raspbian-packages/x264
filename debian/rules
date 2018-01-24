@@ -13,7 +13,7 @@ DH_INSTALL_FILES = debian/$(libx264N).install \
                    debian/libx264-dev.install
 
 %:
-	dh $@ --parallel --with autotools_dev
+	dh $@ --parallel
 
 .PHONY: debian/control
 debian/control:
