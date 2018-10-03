@@ -2,14 +2,7 @@
 # vi:syntax=make
 # configure flags logic
 
-# Set CFLAGS from DEB_CFLAGS if defined, otherwise add build flags from
-# dpkg-buildflags excluding -O2.
-CFLAGS = $(or $(DEB_CFLAGS),$(shell dpkg-buildflags --get CFLAGS 2>/dev/null | sed -e 's/-O2//g'))
-ifeq (,$(CFLAGS))
-  # Handle case for versions of Debian/Ubuntu that have dpkg-dev (<< 1.15.7).
-  CFLAGS = -fstack-protector --param=ssp-buffer-size=4 -Wformat -Wformat-security -Werror=format-security
-endif
-shared_extra_cflags = $(CFLAGS)
+extra_cflags = $(CFLAGS) $(CPPFLAGS)
 
 LDFLAGS := $(filter-out %-Bsymbolic-functions,$(LDFLAGS))
 
@@ -118,14 +111,6 @@ shared_confflags += --disable-asm
 endif
 endif
 
-# See Bug#743713, the debian sparc and sh4 ports are currently stuck with gcc 4.6
-#  -fno-aggressive-loop-optimizations was introduced only in gcc 4.8
-# this conditional will also help any backporters.
-HAVEGCC4.8 :=$(shell dpkg --compare-versions `gcc --version | grep ^gcc | sed 's/^.* //g'` ge 4.8 && echo yes || echo no)
-ifeq (yes,$(HAVEGCC4.8))
-common_confflags += --extra-cflags=-fno-aggressive-loop-optimizations
-endif
-
 # MIPS upstream arch, mips, mipsel and mips64el Debian arches; no upstream flags by
 # default
 ifneq (,$(filter mips mipsel mips64el,$(DEB_HOST_GNU_CPU)))
@@ -150,7 +135,7 @@ toolchain_arch := $(shell $(CC) -v 2>&1 | sed -n '/^Configured with: / s/.* --wi
 ifeq ($(toolchain_arch),)
 toolchain_arch := armv6t2
 endif
-shared_extra_cflags += -march=$(toolchain_arch)
+extra_cflags += -march=$(toolchain_arch)
 else
 do_opt := yes
 opt_libdir := /usr/lib/$(DEB_HOST_MULTIARCH)/neon/vfp

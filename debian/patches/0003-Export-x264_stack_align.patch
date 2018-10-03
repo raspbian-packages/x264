@@ -1,0 +1,22 @@
+From: Sebastian Ramacher <sramacher@debian.org>
+Date: Tue, 28 Aug 2018 22:23:24 +0200
+Subject: Export x264_stack_align
+
+The function is used in x265.c.
+---
+ common/x86/cpu-a.asm | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/common/x86/cpu-a.asm b/common/x86/cpu-a.asm
+index d94f7d5..e696673 100644
+--- a/common/x86/cpu-a.asm
++++ b/common/x86/cpu-a.asm
+@@ -83,7 +83,7 @@ cglobal cpu_sfence
+ ;-----------------------------------------------------------------------------
+ ; intptr_t stack_align( void (*func)(void*), ... ); (up to 5 args)
+ ;-----------------------------------------------------------------------------
+-cglobal stack_align
++cvisible stack_align
+     mov      rax, r0mp
+     mov       r0, r1mp
+     mov       r1, r2mp

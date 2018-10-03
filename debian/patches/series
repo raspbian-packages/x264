@@ -1,2 +1,3 @@
 link_gpac_dynamically.patch
 properly_detect_x32.patch
+0003-Export-x264_stack_align.patch

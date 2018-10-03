@@ -4,7 +4,7 @@
 
 set -e
 
-cd "$ADTTMP"
+cd "$AUTOPKGTEST_TMP"
 
 ffmpeg -y -filter_complex testsrc -t 10 in.avi
 x264 --crf 24 -o out.mkv in.avi

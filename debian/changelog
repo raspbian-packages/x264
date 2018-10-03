@@ -1,4 +1,4 @@
-x264 (2:0.152.2854+gite9a5903-2+rpi1) buster-staging; urgency=medium
+x264 (2:0.155.2917+git0a84d98-2+rpi1) buster-staging; urgency=medium
 
   [Changes introduced in 2:0.142.2431+gita5831aa-1+rpi2 by Peter Michael Green]
   * Revert previous raspbian changes (not all of which were mentioned
@@ -6,7 +6,49 @@ x264 (2:0.152.2854+gite9a5903-2+rpi1) buster-staging; urgency=medium
   * Pass --disable-asm for static build to prevent it being
     armv7/neon contaminated.
 
- -- Raspbian forward porter <root@raspbian.org>  Wed, 24 Jan 2018 08:15:39 +0000
+ -- Raspbian forward porter <root@raspbian.org>  Wed, 03 Oct 2018 02:15:56 +0000
+
+x264 (2:0.155.2917+git0a84d98-2) unstable; urgency=medium
+
+  * Team upload.
+  * Upload to unstable.
+
+ -- Sebastian Ramacher <sramacher@debian.org>  Thu, 27 Sep 2018 22:03:40 +0200
+
+x264 (2:0.155.2917+git0a84d98-1) experimental; urgency=medium
+
+  [ Ondřej Nový ]
+  * d/copyright: Change Format URL to correct one
+  * d/control: Set Vcs-* to salsa.debian.org
+  * d/changelog: Remove trailing whitespaces
+
+  [ Felipe Sateler ]
+  * Change maintainer address to debian-multimedia@lists.debian.org
+
+  [ Ondřej Nový ]
+  * d/tests: Use AUTOPKGTEST_TMP instead of ADTTMP
+
+  [ Rico Tzschichholz ]
+  * Update to new stable upstream
+  * New upstream version 0.155.2917+git0a84d98
+  * Drop custom 10bit build, upstream supports this as runtime option now
+  * Update debian/control for soname bump
+  * Regenerate manpage
+  * Update copyright years
+
+  [ Sebastian Ramacher ]
+  * debian/{rules,confflags}:
+    - Use dpkg include for architecture variables.
+    - Fix dh_install --list-missing warning.
+    - Remove cruft.
+    - Handle CPPFLAGS.
+  * debian/patches: Export x264_stack_align.
+  * debian/: Bump debhelper compat to 11.
+  * debian/control:
+    - Drop obsolete dpkg-dev B-D.
+    - Bump Standards-Version.
+
+ -- Rico Tzschichholz <ricotz@ubuntu.com>  Fri, 24 Aug 2018 17:25:59 +0200
 
 x264 (2:0.152.2854+gite9a5903-2) unstable; urgency=medium
 
@@ -613,11 +655,11 @@ x264 (2:0.85.1448+git1a6d32-1) lucid; urgency=low
   * Drop --enable-pic, let's see what breaks, LP: #524859
 
   [ Reinhard Tartler ]
-  * New upstream snapshot, no new features, LP: #526396 
+  * New upstream snapshot, no new features, LP: #526396
   * remove quilt infrastructure
   * don't set CFLAGS in debian/rules, upstream build system overrides
     this anyways
-  
+
  -- Reinhard Tartler <siretart@tauware.de>  Sun, 21 Feb 2010 16:57:21 +0100
 
 x264 (2:0.85.1442.1+git781d30-1) lucid; urgency=low

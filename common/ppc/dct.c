@@ -1,7 +1,7 @@
 /*****************************************************************************
  * dct.c: ppc transform and zigzag
  *****************************************************************************
- * Copyright (C) 2003-2017 x264 project
+ * Copyright (C) 2003-2018 x264 project
  *
  * Authors: Guillaume Poirier <gpoirier@mplayerhq.hu>
  *          Eric Petit <eric.petit@lapsus.org>
@@ -26,6 +26,7 @@
 
 #include "common/common.h"
 #include "ppccommon.h"
+#include "dct.h"
 
 #if !HIGH_BIT_DEPTH
 #define VEC_DCT(a0,a1,a2,a3,b0,b1,b2,b3) \
@@ -640,7 +641,7 @@ void x264_zigzag_interleave_8x8_cavlc_altivec( int16_t *dst, int16_t *src, uint8
 {
     vec_s16_t tmpv[8];
     vec_s16_t merge[2];
-    vec_s16_t permv[2];
+    vec_s16_t permv[3];
     vec_s16_t orv[4];
     vec_s16_t src0v = vec_ld( 0*16, src );
     vec_s16_t src1v = vec_ld( 1*16, src );
