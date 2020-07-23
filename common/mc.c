@@ -1,7 +1,7 @@
 /*****************************************************************************
  * mc.c: motion compensation
  *****************************************************************************
- * Copyright (C) 2003-2018 x264 project
+ * Copyright (C) 2003-2020 x264 project
  *
  * Authors: Laurent Aimar <fenrir@via.ecp.fr>
  *          Loren Merritt <lorenm@u.washington.edu>
@@ -29,16 +29,16 @@
 #if HAVE_MMX
 #include "x86/mc.h"
 #endif
-#if ARCH_PPC
+#if HAVE_ALTIVEC
 #include "ppc/mc.h"
 #endif
-#if ARCH_ARM
+#if HAVE_ARMV6
 #include "arm/mc.h"
 #endif
-#if ARCH_AARCH64
+#if HAVE_AARCH64
 #include "aarch64/mc.h"
 #endif
-#if ARCH_MIPS
+#if HAVE_MSA
 #include "mips/mc.h"
 #endif
 
@@ -652,6 +652,7 @@ void x264_mc_init( int cpu, x264_mc_functions_t *pf, int cpu_independent )
 
     pf->hpel_filter = hpel_filter;
 
+    pf->prefetch_fenc_400 = prefetch_fenc_null;
     pf->prefetch_fenc_420 = prefetch_fenc_null;
     pf->prefetch_fenc_422 = prefetch_fenc_null;
     pf->prefetch_ref  = prefetch_ref_null;
@@ -679,7 +680,7 @@ void x264_mc_init( int cpu, x264_mc_functions_t *pf, int cpu_independent )
 #if HAVE_ARMV6
     x264_mc_init_arm( cpu, pf );
 #endif
-#if ARCH_AARCH64
+#if HAVE_AARCH64
     x264_mc_init_aarch64( cpu, pf );
 #endif
 #if HAVE_MSA

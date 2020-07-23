@@ -1,7 +1,7 @@
 /*****************************************************************************
  * dct.c: transform and zigzag
  *****************************************************************************
- * Copyright (C) 2003-2018 x264 project
+ * Copyright (C) 2003-2020 x264 project
  *
  * Authors: Loren Merritt <lorenm@u.washington.edu>
  *          Laurent Aimar <fenrir@via.ecp.fr>
@@ -29,16 +29,16 @@
 #if HAVE_MMX
 #   include "x86/dct.h"
 #endif
-#if ARCH_PPC
+#if HAVE_ALTIVEC
 #   include "ppc/dct.h"
 #endif
-#if ARCH_ARM
+#if HAVE_ARMV6
 #   include "arm/dct.h"
 #endif
-#if ARCH_AARCH64
+#if HAVE_AARCH64
 #   include "aarch64/dct.h"
 #endif
-#if ARCH_MIPS
+#if HAVE_MSA
 #   include "mips/dct.h"
 #endif
 
@@ -437,7 +437,7 @@ static void add16x16_idct8( pixel *dst, dctcoef dct[4][64] )
     add8x8_idct8( &dst[8*FDEC_STRIDE+8], dct[3] );
 }
 
-static void inline add4x4_idct_dc( pixel *p_dst, dctcoef dc )
+static inline void add4x4_idct_dc( pixel *p_dst, dctcoef dc )
 {
     dc = (dc + 32) >> 6;
     for( int i = 0; i < 4; i++, p_dst += FDEC_STRIDE )
@@ -667,6 +667,7 @@ void x264_dct_init( int cpu, x264_dct_function_t *dctf )
         dctf->sub16x16_dct  = x264_sub16x16_dct_altivec;
 
         dctf->add8x8_idct_dc = x264_add8x8_idct_dc_altivec;
+        dctf->add16x16_idct_dc = x264_add16x16_idct_dc_altivec;
 
         dctf->add4x4_idct   = x264_add4x4_idct_altivec;
         dctf->add8x8_idct   = x264_add8x8_idct_altivec;
@@ -681,7 +682,7 @@ void x264_dct_init( int cpu, x264_dct_function_t *dctf )
     }
 #endif
 
-#if HAVE_ARMV6 || ARCH_AARCH64
+#if HAVE_ARMV6 || HAVE_AARCH64
     if( cpu&X264_CPU_NEON )
     {
         dctf->sub4x4_dct    = x264_sub4x4_dct_neon;
@@ -995,11 +996,11 @@ void x264_zigzag_init( int cpu, x264_zigzag_function_t *pf_progressive, x264_zig
         pf_progressive->scan_8x8  = x264_zigzag_scan_8x8_frame_altivec;
     }
 #endif
-#if HAVE_ARMV6 || ARCH_AARCH64
+#if HAVE_ARMV6 || HAVE_AARCH64
     if( cpu&X264_CPU_NEON )
     {
         pf_progressive->scan_4x4  = x264_zigzag_scan_4x4_frame_neon;
-#if ARCH_AARCH64
+#if HAVE_AARCH64
         pf_interlaced->scan_4x4   = x264_zigzag_scan_4x4_field_neon;
         pf_interlaced->scan_8x8   = x264_zigzag_scan_8x8_field_neon;
         pf_interlaced->sub_4x4    = x264_zigzag_sub_4x4_field_neon;
@@ -1009,9 +1010,9 @@ void x264_zigzag_init( int cpu, x264_zigzag_function_t *pf_progressive, x264_zig
         pf_progressive->sub_4x4   = x264_zigzag_sub_4x4_frame_neon;
         pf_progressive->sub_4x4ac = x264_zigzag_sub_4x4ac_frame_neon;
         pf_progressive->sub_8x8   = x264_zigzag_sub_8x8_frame_neon;
-#endif // ARCH_AARCH64
+#endif // HAVE_AARCH64
     }
-#endif // HAVE_ARMV6 || ARCH_AARCH64
+#endif // HAVE_ARMV6 || HAVE_AARCH64
 #endif // HIGH_BIT_DEPTH
 
     pf_interlaced->interleave_8x8_cavlc =
@@ -1064,13 +1065,13 @@ void x264_zigzag_init( int cpu, x264_zigzag_function_t *pf_progressive, x264_zig
 #endif // HIGH_BIT_DEPTH
 #endif
 #if !HIGH_BIT_DEPTH
-#if ARCH_AARCH64
+#if HAVE_AARCH64
     if( cpu&X264_CPU_NEON )
     {
         pf_interlaced->interleave_8x8_cavlc =
         pf_progressive->interleave_8x8_cavlc =  x264_zigzag_interleave_8x8_cavlc_neon;
     }
-#endif // ARCH_AARCH64
+#endif // HAVE_AARCH64
 
 #if HAVE_ALTIVEC
     if( cpu&X264_CPU_ALTIVEC )

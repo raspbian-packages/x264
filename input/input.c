@@ -1,7 +1,7 @@
 /*****************************************************************************
  * input.c: common input functions
  *****************************************************************************
- * Copyright (C) 2010-2018 x264 project
+ * Copyright (C) 2010-2020 x264 project
  *
  * Authors: Steven Walters <kemuri9@gmail.com>
  *          Henrik Gramner <henrik@gramner.com>
@@ -34,6 +34,7 @@
 #endif
 
 const x264_cli_csp_t x264_cli_csps[] = {
+    [X264_CSP_I400] = { "i400", 1, { 1 },         { 1 },         1, 1 },
     [X264_CSP_I420] = { "i420", 3, { 1, .5, .5 }, { 1, .5, .5 }, 2, 2 },
     [X264_CSP_I422] = { "i422", 3, { 1, .5, .5 }, { 1,  1,  1 }, 2, 1 },
     [X264_CSP_I444] = { "i444", 3, { 1,  1,  1 }, { 1,  1,  1 }, 1, 1 },
@@ -64,22 +65,22 @@ int x264_cli_csp_depth_factor( int csp )
     return (csp & X264_CSP_HIGH_DEPTH) ? 2 : 1;
 }
 
-uint64_t x264_cli_pic_plane_size( int csp, int width, int height, int plane )
+int64_t x264_cli_pic_plane_size( int csp, int width, int height, int plane )
 {
     int csp_mask = csp & X264_CSP_MASK;
     if( x264_cli_csp_is_invalid( csp ) || plane < 0 || plane >= x264_cli_csps[csp_mask].planes )
         return 0;
-    uint64_t size = (uint64_t)width * height;
+    int64_t size = (int64_t)width * height;
     size *= x264_cli_csps[csp_mask].width[plane] * x264_cli_csps[csp_mask].height[plane];
     size *= x264_cli_csp_depth_factor( csp );
     return size;
 }
 
-uint64_t x264_cli_pic_size( int csp, int width, int height )
+int64_t x264_cli_pic_size( int csp, int width, int height )
 {
     if( x264_cli_csp_is_invalid( csp ) )
         return 0;
-    uint64_t size = 0;
+    int64_t size = 0;
     int csp_mask = csp & X264_CSP_MASK;
     for( int i = 0; i < x264_cli_csps[csp_mask].planes; i++ )
         size += x264_cli_pic_plane_size( csp, width, height, i );
@@ -106,7 +107,7 @@ static int cli_pic_init_internal( cli_pic_t *pic, int csp, int width, int height
 
         if( alloc )
         {
-            size_t size = (size_t)(height * x264_cli_csps[csp_mask].height[i]) * stride;
+            int64_t size = (int64_t)(height * x264_cli_csps[csp_mask].height[i]) * stride;
             pic->img.plane[i] = x264_malloc( size );
             if( !pic->img.plane[i] )
                 return -1;
@@ -181,11 +182,13 @@ int x264_cli_mmap_init( cli_mmap_t *h, FILE *fh )
  * in segfaults. We have to pad the buffer size as a workaround to avoid that. */
 #define MMAP_PADDING 64
 
-void *x264_cli_mmap( cli_mmap_t *h, int64_t offset, size_t size )
+void *x264_cli_mmap( cli_mmap_t *h, int64_t offset, int64_t size )
 {
 #if defined(_WIN32) || HAVE_MMAP
     uint8_t *base;
     int align = offset & h->align_mask;
+    if( size < 0 || size > (SIZE_MAX - MMAP_PADDING - align) )
+        return NULL;
     offset -= align;
     size   += align;
 #ifdef _WIN32
@@ -195,10 +198,10 @@ void *x264_cli_mmap( cli_mmap_t *h, int64_t offset, size_t size )
     {
         /* It's not possible to do the POSIX mmap() remapping trick on Windows, so if the padding crosses a
          * page boundary past the end of the file we have to copy the entire frame into a padded buffer. */
-        if( (base = MapViewOfFile( h->map_handle, FILE_MAP_READ, offset >> 32, offset, size )) )
+        if( (base = MapViewOfFile( h->map_handle, FILE_MAP_READ, (uint64_t)offset >> 32, offset, size )) )
         {
             uint8_t *buf = NULL;
-            HANDLE anon_map = CreateFileMappingW( INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE, 0, padded_size, NULL );
+            HANDLE anon_map = CreateFileMappingW( INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE, (uint64_t)padded_size >> 32, padded_size, NULL );
             if( anon_map )
             {
                 if( (buf = MapViewOfFile( anon_map, FILE_MAP_WRITE, 0, 0, 0 )) )
@@ -212,7 +215,7 @@ void *x264_cli_mmap( cli_mmap_t *h, int64_t offset, size_t size )
             return buf;
         }
     }
-    else if( (base = MapViewOfFile( h->map_handle, FILE_MAP_READ, offset >> 32, offset, padded_size )) )
+    else if( (base = MapViewOfFile( h->map_handle, FILE_MAP_READ, (uint64_t)offset >> 32, offset, padded_size )) )
     {
         /* PrefetchVirtualMemory() is only available on Windows 8 and newer. */
         if( h->prefetch_virtual_memory )
@@ -248,13 +251,15 @@ void *x264_cli_mmap( cli_mmap_t *h, int64_t offset, size_t size )
     return NULL;
 }
 
-int x264_cli_munmap( cli_mmap_t *h, void *addr, size_t size )
+int x264_cli_munmap( cli_mmap_t *h, void *addr, int64_t size )
 {
 #if defined(_WIN32) || HAVE_MMAP
     void *base = (void*)((intptr_t)addr & ~h->align_mask);
 #ifdef _WIN32
     return !UnmapViewOfFile( base );
 #else
+    if( size < 0 || size > (SIZE_MAX - MMAP_PADDING - ((intptr_t)addr - (intptr_t)base)) )
+        return -1;
     return munmap( base, size + MMAP_PADDING + (intptr_t)addr - (intptr_t)base );
 #endif
 #endif

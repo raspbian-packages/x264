@@ -1,4 +1,4 @@
-x264 (2:0.155.2917+git0a84d98-2+rpi1) buster-staging; urgency=medium
+x264 (2:0.159.2999+git296494a-2+rpi1) bullseye-staging; urgency=medium
 
   [Changes introduced in 2:0.142.2431+gita5831aa-1+rpi2 by Peter Michael Green]
   * Revert previous raspbian changes (not all of which were mentioned
@@ -6,7 +6,39 @@ x264 (2:0.155.2917+git0a84d98-2+rpi1) buster-staging; urgency=medium
   * Pass --disable-asm for static build to prevent it being
     armv7/neon contaminated.
 
- -- Raspbian forward porter <root@raspbian.org>  Wed, 03 Oct 2018 02:15:56 +0000
+ -- Raspbian forward porter <root@raspbian.org>  Thu, 23 Jul 2020 20:26:51 +0000
+
+x264 (2:0.159.2999+git296494a-2) unstable; urgency=medium
+
+  * Team upload
+  * Upload to unstable
+
+ -- Sebastian Ramacher <sramacher@debian.org>  Sun, 12 Jul 2020 18:46:44 +0200
+
+x264 (2:0.159.2999+git296494a-1) experimental; urgency=medium
+
+  [ Fabian Greffrath ]
+  * Remove myself from Uploaders
+
+  [ Rico Tzschichholz ]
+  * Update to new stable upstream
+  * New upstream version 0.159.2999+git296494a
+  * Drop upstreamed "Export x264_stack_align" patch
+  * Update debian/control for soname bump
+  * Regenerate manpage
+
+  [ Ondřej Nový ]
+  * Use debhelper-compat instead of debian/compat
+
+  [ Sebastian Ramacher ]
+  * debian/control:
+    - Bump debhlper compat to 13
+    - Bump Standards-Version
+    - Set RRR: no
+  * debian/copyright: Bump copyright years
+  * debian/rules: Fix awk invocation
+
+ -- Rico Tzschichholz <ricotz@ubuntu.com>  Sun, 21 Jun 2020 15:52:08 +0200
 
 x264 (2:0.155.2917+git0a84d98-2) unstable; urgency=medium
 

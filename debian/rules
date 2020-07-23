@@ -1,6 +1,6 @@
 #!/usr/bin/make -f
 
-libx264N := libx264-$(shell awk '/\#define X264_BUILD/{print $$3}' x264.h)
+libx264N := libx264-$(shell awk '/#define X264_BUILD/{print $$3}' x264.h)
 
 include /usr/share/dpkg/architecture.mk
 include debian/confflags
