@@ -6,6 +6,9 @@ x264 (2:0.159.2999+git296494a-2+rpi1) bullseye-staging; urgency=medium
   * Pass --disable-asm for static build to prevent it being
     armv7/neon contaminated.
 
+  [Changes introduced in 2:0.159.2999+git296494a-2+rpi1 by Peter Michael Green]
+  * Fix build with make 4.2
+
  -- Raspbian forward porter <root@raspbian.org>  Thu, 23 Jul 2020 20:26:51 +0000
 
 x264 (2:0.159.2999+git296494a-2) unstable; urgency=medium

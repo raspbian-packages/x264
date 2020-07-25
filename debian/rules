@@ -1,6 +1,10 @@
 #!/usr/bin/make -f
 
-libx264N := libx264-$(shell awk '/#define X264_BUILD/{print $$3}' x264.h)
+# GNU make 4.3 changes the escaping rules for the hash sign, the reccomended
+# way to maintain compatibility with both 4.2 and 4.3 is to use a variable
+# see https://lwn.net/Articles/810071/
+HASHDEFINE:=\#define
+libx264N := libx264-$(shell awk '/$(HASHDEFINE) X264_BUILD/{print $$3}' x264.h)
 
 include /usr/share/dpkg/architecture.mk
 include debian/confflags
