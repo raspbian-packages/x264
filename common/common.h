@@ -802,7 +802,7 @@ static ALWAYS_INLINE int x264_predictor_clip( int16_t (*dst)[2], int16_t (*mvc)[
     return cnt;
 }
 
-#if ARCH_X86 || ARCH_X86_64
+#if ARCH_X86 || ARCH_X86_64 || ARCH_X32
 #include "x86/util.h"
 #endif
 
