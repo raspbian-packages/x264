@@ -1,7 +1,7 @@
 /*****************************************************************************
  * frame.h: frame handling
  *****************************************************************************
- * Copyright (C) 2003-2018 x264 project
+ * Copyright (C) 2003-2020 x264 project
  *
  * Authors: Laurent Aimar <fenrir@via.ecp.fr>
  *          Loren Merritt <lorenm@u.washington.edu>
@@ -86,7 +86,7 @@ typedef struct x264_frame
      * allocated data are stored in buffer */
     pixel *buffer[4];
     pixel *buffer_fld[4];
-    pixel *buffer_lowres[4];
+    pixel *buffer_lowres;
 
     x264_weight_t weight[X264_REF_MAX][3]; /* [ref_index][plane] */
     pixel *weighted[X264_REF_MAX]; /* plane[0] weighted of the reference frames */
@@ -246,12 +246,12 @@ void          x264_frame_filter( x264_t *h, x264_frame_t *frame, int mb_y, int b
 void          x264_frame_init_lowres( x264_t *h, x264_frame_t *frame );
 
 #define x264_deblock_init x264_template(deblock_init)
-void          x264_deblock_init( int cpu, x264_deblock_function_t *pf, int b_mbaff );
+void          x264_deblock_init( uint32_t cpu, x264_deblock_function_t *pf, int b_mbaff );
 
 #define x264_frame_cond_broadcast x264_template(frame_cond_broadcast)
 void          x264_frame_cond_broadcast( x264_frame_t *frame, int i_lines_completed );
 #define x264_frame_cond_wait x264_template(frame_cond_wait)
-void          x264_frame_cond_wait( x264_frame_t *frame, int i_lines_completed );
+int           x264_frame_cond_wait( x264_frame_t *frame, int i_lines_completed );
 #define x264_frame_new_slice x264_template(frame_new_slice)
 int           x264_frame_new_slice( x264_t *h, x264_frame_t *frame );
 
@@ -261,13 +261,14 @@ void          x264_threadslice_cond_broadcast( x264_t *h, int pass );
 void          x264_threadslice_cond_wait( x264_t *h, int pass );
 
 #define x264_frame_push x264_template(frame_push)
-void          x264_frame_push( x264_frame_t **list, x264_frame_t *frame );
+X264_API void          x264_frame_push( x264_frame_t **list, x264_frame_t *frame );
 #define x264_frame_pop x264_template(frame_pop)
-x264_frame_t *x264_frame_pop( x264_frame_t **list );
+X264_API x264_frame_t *x264_frame_pop( x264_frame_t **list );
 #define x264_frame_unshift x264_template(frame_unshift)
-void          x264_frame_unshift( x264_frame_t **list, x264_frame_t *frame );
+X264_API void          x264_frame_unshift( x264_frame_t **list, x264_frame_t *frame );
 #define x264_frame_shift x264_template(frame_shift)
-x264_frame_t *x264_frame_shift( x264_frame_t **list );
+X264_API x264_frame_t *x264_frame_shift( x264_frame_t **list );
+
 #define x264_frame_push_unused x264_template(frame_push_unused)
 void          x264_frame_push_unused( x264_t *h, x264_frame_t *frame );
 #define x264_frame_push_blank_unused x264_template(frame_push_blank_unused)

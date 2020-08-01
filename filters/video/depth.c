@@ -1,7 +1,7 @@
 /*****************************************************************************
  * depth.c: bit-depth conversion video filter
  *****************************************************************************
- * Copyright (C) 2010-2018 x264 project
+ * Copyright (C) 2010-2020 x264 project
  *
  * Authors: Oskar Arvidsson <oskar@irock.se>
  *
@@ -51,7 +51,8 @@ typedef struct
 static int depth_filter_csp_is_supported( int csp )
 {
     int csp_mask = csp & X264_CSP_MASK;
-    return csp_mask == X264_CSP_I420 ||
+    return csp_mask == X264_CSP_I400 ||
+           csp_mask == X264_CSP_I420 ||
            csp_mask == X264_CSP_I422 ||
            csp_mask == X264_CSP_I444 ||
            csp_mask == X264_CSP_YV12 ||
@@ -114,7 +115,7 @@ static void dither_image( cli_image_t *out, cli_image_t *img, int16_t *error_buf
         int width = x264_cli_csps[csp_mask].width[i] * img->width / num_interleaved;
 
 #define CALL_DITHER_PLANE( pitch, off ) \
-        dither_plane_##pitch( ((pixel*)out->plane[i])+off, out->stride[i]/sizeof(pixel), \
+        dither_plane_##pitch( ((pixel*)out->plane[i])+off, out->stride[i]/SIZEOF_PIXEL, \
                 ((uint16_t*)img->plane[i])+off, img->stride[i]/2, width, height, error_buf )
 
         if( num_interleaved == 4 )

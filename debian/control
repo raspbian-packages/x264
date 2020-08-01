@@ -4,18 +4,18 @@ Priority: optional
 Maintainer: Debian Multimedia Maintainers <debian-multimedia@lists.debian.org>
 Uploaders:
  Reinhard Tartler <siretart@tauware.de>,
- Fabian Greffrath <fabian+debian@greffrath.com>,
  Rico Tzschichholz <ricotz@ubuntu.com>
 Build-Depends:
- debhelper (>= 11),
+ debhelper-compat (= 13),
  libavformat-dev (>= 6:9) <!stage1>,
  libffms2-dev <!stage1>,
  libgpac-dev (>= 0.5.0+svn4288~) <!stage1>,
  nasm (>= 2.13) [any-i386 any-amd64]
-Standards-Version: 4.2.1
+Standards-Version: 4.5.0
 Vcs-Git: https://salsa.debian.org/multimedia-team/x264.git
 Vcs-Browser: https://salsa.debian.org/multimedia-team/x264
 Homepage: http://www.videolan.org/developers/x264.html
+Rules-Requires-Root: no
 
 Package: x264
 Section: graphics
@@ -47,7 +47,7 @@ Description: video encoder for the H.264/MPEG-4 AVC standard
   * parallel encoding on multiple CPUs
   * interlaced streams
 
-Package: libx264-155
+Package: libx264-160
 Architecture: any
 Multi-Arch: same
 Depends:
@@ -64,7 +64,7 @@ Section: libdevel
 Architecture: any
 Multi-Arch: same
 Depends:
- libx264-155 (= ${binary:Version}),
+ libx264-160 (= ${binary:Version}),
  ${misc:Depends}
 Description: development files for libx264
  libx264 is an advanced encoding library for creating H.264 (MPEG-4 AVC)

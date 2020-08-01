@@ -1,7 +1,7 @@
 /*****************************************************************************
  * frame.c: frame handling
  *****************************************************************************
- * Copyright (C) 2003-2018 x264 project
+ * Copyright (C) 2003-2020 x264 project
  *
  * Authors: Laurent Aimar <fenrir@via.ecp.fr>
  *          Loren Merritt <lorenm@u.washington.edu>
@@ -44,29 +44,16 @@ static int align_plane_size( int x, int disalign )
 
 static int frame_internal_csp( int external_csp )
 {
-    switch( external_csp & X264_CSP_MASK )
-    {
-        case X264_CSP_NV12:
-        case X264_CSP_NV21:
-        case X264_CSP_I420:
-        case X264_CSP_YV12:
-            return X264_CSP_NV12;
-        case X264_CSP_NV16:
-        case X264_CSP_I422:
-        case X264_CSP_YV16:
-        case X264_CSP_YUYV:
-        case X264_CSP_UYVY:
-        case X264_CSP_V210:
-            return X264_CSP_NV16;
-        case X264_CSP_I444:
-        case X264_CSP_YV24:
-        case X264_CSP_BGR:
-        case X264_CSP_BGRA:
-        case X264_CSP_RGB:
-            return X264_CSP_I444;
-        default:
-            return X264_CSP_NONE;
-    }
+    int csp = external_csp & X264_CSP_MASK;
+    if( csp == X264_CSP_I400 )
+        return X264_CSP_I400;
+    if( csp >= X264_CSP_I420 && csp < X264_CSP_I422 )
+        return X264_CSP_NV12;
+    if( csp >= X264_CSP_I422 && csp < X264_CSP_I444 )
+        return X264_CSP_NV16;
+    if( csp >= X264_CSP_I444 && csp <= X264_CSP_RGB )
+        return X264_CSP_I444;
+    return X264_CSP_NONE;
 }
 
 static x264_frame_t *frame_new( x264_t *h, int b_fdec )
@@ -88,6 +75,9 @@ static x264_frame_t *frame_new( x264_t *h, int b_fdec )
 #else
     int disalign = 1<<10;
 #endif
+
+    /* ensure frame alignment after PADH is added */
+    int padh_align = X264_MAX( align - PADH * SIZEOF_PIXEL, 0 ) / SIZEOF_PIXEL;
 
     CHECKED_MALLOCZERO( frame, sizeof(x264_frame_t) );
     PREALLOC_INIT
@@ -118,6 +108,14 @@ static x264_frame_t *frame_new( x264_t *h, int b_fdec )
             frame->i_lines[i] = i_lines;
             frame->i_stride[i] = i_stride;
         }
+    }
+    else if( i_csp == X264_CSP_I400 )
+    {
+        luma_plane_count = 1;
+        frame->i_plane = 1;
+        frame->i_width[0] = i_width;
+        frame->i_lines[0] = i_lines;
+        frame->i_stride[0] = i_stride;
     }
     else
         goto fail;
@@ -154,9 +152,9 @@ static x264_frame_t *frame_new( x264_t *h, int b_fdec )
     {
         int chroma_padv = i_padv >> (i_csp == X264_CSP_NV12);
         int chroma_plane_size = (frame->i_stride[1] * (frame->i_lines[1] + 2*chroma_padv));
-        PREALLOC( frame->buffer[1], chroma_plane_size * sizeof(pixel) );
+        PREALLOC( frame->buffer[1], (chroma_plane_size + padh_align) * SIZEOF_PIXEL );
         if( PARAM_INTERLACED )
-            PREALLOC( frame->buffer_fld[1], chroma_plane_size * sizeof(pixel) );
+            PREALLOC( frame->buffer_fld[1], (chroma_plane_size + padh_align) * SIZEOF_PIXEL );
     }
 
     /* all 4 luma planes allocated together, since the cacheline split code
@@ -164,20 +162,14 @@ static x264_frame_t *frame_new( x264_t *h, int b_fdec )
 
     for( int p = 0; p < luma_plane_count; p++ )
     {
-        int luma_plane_size = align_plane_size( frame->i_stride[p] * (frame->i_lines[p] + 2*i_padv), disalign );
+        int64_t luma_plane_size = align_plane_size( frame->i_stride[p] * (frame->i_lines[p] + 2*i_padv), disalign );
         if( h->param.analyse.i_subpel_refine && b_fdec )
-        {
-            /* FIXME: Don't allocate both buffers in non-adaptive MBAFF. */
-            PREALLOC( frame->buffer[p], 4*luma_plane_size * sizeof(pixel) );
-            if( PARAM_INTERLACED )
-                PREALLOC( frame->buffer_fld[p], 4*luma_plane_size * sizeof(pixel) );
-        }
-        else
-        {
-            PREALLOC( frame->buffer[p], luma_plane_size * sizeof(pixel) );
-            if( PARAM_INTERLACED )
-                PREALLOC( frame->buffer_fld[p], luma_plane_size * sizeof(pixel) );
-        }
+            luma_plane_size *= 4;
+
+        /* FIXME: Don't allocate both buffers in non-adaptive MBAFF. */
+        PREALLOC( frame->buffer[p], (luma_plane_size + padh_align) * SIZEOF_PIXEL );
+        if( PARAM_INTERLACED )
+            PREALLOC( frame->buffer_fld[p], (luma_plane_size + padh_align) * SIZEOF_PIXEL );
     }
 
     frame->b_duplicate = 0;
@@ -213,9 +205,9 @@ static x264_frame_t *frame_new( x264_t *h, int b_fdec )
     {
         if( h->frames.b_have_lowres )
         {
-            int luma_plane_size = align_plane_size( frame->i_stride_lowres * (frame->i_lines[0]/2 + 2*PADV), disalign );
+            int64_t luma_plane_size = align_plane_size( frame->i_stride_lowres * (frame->i_lines[0]/2 + 2*PADV), disalign );
 
-            PREALLOC( frame->buffer_lowres[0], 4 * luma_plane_size * sizeof(pixel) );
+            PREALLOC( frame->buffer_lowres, (4 * luma_plane_size + padh_align) * SIZEOF_PIXEL );
 
             for( int j = 0; j <= !!h->param.i_bframe; j++ )
                 for( int i = 0; i <= h->param.i_bframe; i++ )
@@ -245,28 +237,30 @@ static x264_frame_t *frame_new( x264_t *h, int b_fdec )
     if( i_csp == X264_CSP_NV12 || i_csp == X264_CSP_NV16 )
     {
         int chroma_padv = i_padv >> (i_csp == X264_CSP_NV12);
-        frame->plane[1] = frame->buffer[1] + frame->i_stride[1] * chroma_padv + PADH;
+        frame->plane[1] = frame->buffer[1] + frame->i_stride[1] * chroma_padv + PADH + padh_align;
         if( PARAM_INTERLACED )
-            frame->plane_fld[1] = frame->buffer_fld[1] + frame->i_stride[1] * chroma_padv + PADH;
+            frame->plane_fld[1] = frame->buffer_fld[1] + frame->i_stride[1] * chroma_padv + PADH + padh_align;
     }
 
     for( int p = 0; p < luma_plane_count; p++ )
     {
-        int luma_plane_size = align_plane_size( frame->i_stride[p] * (frame->i_lines[p] + 2*i_padv), disalign );
+        int64_t luma_plane_size = align_plane_size( frame->i_stride[p] * (frame->i_lines[p] + 2*i_padv), disalign );
         if( h->param.analyse.i_subpel_refine && b_fdec )
         {
             for( int i = 0; i < 4; i++ )
             {
-                frame->filtered[p][i] = frame->buffer[p] + i*luma_plane_size + frame->i_stride[p] * i_padv + PADH;
-                frame->filtered_fld[p][i] = frame->buffer_fld[p] + i*luma_plane_size + frame->i_stride[p] * i_padv + PADH;
+                frame->filtered[p][i] = frame->buffer[p] + i*luma_plane_size + frame->i_stride[p] * i_padv + PADH + padh_align;
+                if( PARAM_INTERLACED )
+                    frame->filtered_fld[p][i] = frame->buffer_fld[p] + i*luma_plane_size + frame->i_stride[p] * i_padv + PADH + padh_align;
             }
             frame->plane[p] = frame->filtered[p][0];
             frame->plane_fld[p] = frame->filtered_fld[p][0];
         }
         else
         {
-            frame->filtered[p][0] = frame->plane[p] = frame->buffer[p] + frame->i_stride[p] * i_padv + PADH;
-            frame->filtered_fld[p][0] = frame->plane_fld[p] = frame->buffer_fld[p] + frame->i_stride[p] * i_padv + PADH;
+            frame->filtered[p][0] = frame->plane[p] = frame->buffer[p] + frame->i_stride[p] * i_padv + PADH + padh_align;
+            if( PARAM_INTERLACED )
+                frame->filtered_fld[p][0] = frame->plane_fld[p] = frame->buffer_fld[p] + frame->i_stride[p] * i_padv + PADH + padh_align;
         }
     }
 
@@ -282,9 +276,9 @@ static x264_frame_t *frame_new( x264_t *h, int b_fdec )
     {
         if( h->frames.b_have_lowres )
         {
-            int luma_plane_size = align_plane_size( frame->i_stride_lowres * (frame->i_lines[0]/2 + 2*PADV), disalign );
+            int64_t luma_plane_size = align_plane_size( frame->i_stride_lowres * (frame->i_lines[0]/2 + 2*PADV), disalign );
             for( int i = 0; i < 4; i++ )
-                frame->lowres[i] = frame->buffer_lowres[0] + (frame->i_stride_lowres * PADV + PADH) + i * luma_plane_size;
+                frame->lowres[i] = frame->buffer_lowres + frame->i_stride_lowres * PADV + PADH + padh_align + i * luma_plane_size;
 
             for( int j = 0; j <= !!h->param.i_bframe; j++ )
                 for( int i = 0; i <= h->param.i_bframe; i++ )
@@ -425,7 +419,7 @@ int x264_frame_copy_picture( x264_t *h, x264_frame_t *dst, x264_picture_t *src )
 
          h->mc.plane_copy_deinterleave_v210( dst->plane[0], dst->i_stride[0],
                                              dst->plane[1], dst->i_stride[1],
-                                             (uint32_t *)pix[0], stride[0]/sizeof(uint32_t), h->param.i_width, h->param.i_height );
+                                             (uint32_t *)pix[0], stride[0]/(int)sizeof(uint32_t), h->param.i_width, h->param.i_height );
     }
     else if( i_csp >= X264_CSP_BGR )
     {
@@ -440,25 +434,25 @@ int x264_frame_copy_picture( x264_t *h, x264_frame_t *dst, x264_picture_t *src )
          h->mc.plane_copy_deinterleave_rgb( dst->plane[1+b], dst->i_stride[1+b],
                                             dst->plane[0], dst->i_stride[0],
                                             dst->plane[2-b], dst->i_stride[2-b],
-                                            (pixel*)pix[0], stride[0]/sizeof(pixel), i_csp==X264_CSP_BGRA ? 4 : 3, h->param.i_width, h->param.i_height );
+                                            (pixel*)pix[0], stride[0]/SIZEOF_PIXEL, i_csp==X264_CSP_BGRA ? 4 : 3, h->param.i_width, h->param.i_height );
     }
     else
     {
         int v_shift = CHROMA_V_SHIFT;
         get_plane_ptr( h, src, &pix[0], &stride[0], 0, 0, 0 );
         h->mc.plane_copy( dst->plane[0], dst->i_stride[0], (pixel*)pix[0],
-                          stride[0]/sizeof(pixel), h->param.i_width, h->param.i_height );
+                          stride[0]/SIZEOF_PIXEL, h->param.i_width, h->param.i_height );
         if( i_csp == X264_CSP_NV12 || i_csp == X264_CSP_NV16 )
         {
             get_plane_ptr( h, src, &pix[1], &stride[1], 1, 0, v_shift );
             h->mc.plane_copy( dst->plane[1], dst->i_stride[1], (pixel*)pix[1],
-                              stride[1]/sizeof(pixel), h->param.i_width, h->param.i_height>>v_shift );
+                              stride[1]/SIZEOF_PIXEL, h->param.i_width, h->param.i_height>>v_shift );
         }
         else if( i_csp == X264_CSP_NV21 )
         {
             get_plane_ptr( h, src, &pix[1], &stride[1], 1, 0, v_shift );
             h->mc.plane_copy_swap( dst->plane[1], dst->i_stride[1], (pixel*)pix[1],
-                                   stride[1]/sizeof(pixel), h->param.i_width>>1, h->param.i_height>>v_shift );
+                                   stride[1]/SIZEOF_PIXEL, h->param.i_width>>1, h->param.i_height>>v_shift );
         }
         else if( i_csp == X264_CSP_I420 || i_csp == X264_CSP_I422 || i_csp == X264_CSP_YV12 || i_csp == X264_CSP_YV16 )
         {
@@ -466,24 +460,24 @@ int x264_frame_copy_picture( x264_t *h, x264_frame_t *dst, x264_picture_t *src )
             get_plane_ptr( h, src, &pix[1], &stride[1], uv_swap ? 2 : 1, 1, v_shift );
             get_plane_ptr( h, src, &pix[2], &stride[2], uv_swap ? 1 : 2, 1, v_shift );
             h->mc.plane_copy_interleave( dst->plane[1], dst->i_stride[1],
-                                         (pixel*)pix[1], stride[1]/sizeof(pixel),
-                                         (pixel*)pix[2], stride[2]/sizeof(pixel),
+                                         (pixel*)pix[1], stride[1]/SIZEOF_PIXEL,
+                                         (pixel*)pix[2], stride[2]/SIZEOF_PIXEL,
                                          h->param.i_width>>1, h->param.i_height>>v_shift );
         }
-        else //if( i_csp == X264_CSP_I444 || i_csp == X264_CSP_YV24 )
+        else if( i_csp == X264_CSP_I444 || i_csp == X264_CSP_YV24 )
         {
             get_plane_ptr( h, src, &pix[1], &stride[1], i_csp==X264_CSP_I444 ? 1 : 2, 0, 0 );
             get_plane_ptr( h, src, &pix[2], &stride[2], i_csp==X264_CSP_I444 ? 2 : 1, 0, 0 );
             h->mc.plane_copy( dst->plane[1], dst->i_stride[1], (pixel*)pix[1],
-                              stride[1]/sizeof(pixel), h->param.i_width, h->param.i_height );
+                              stride[1]/SIZEOF_PIXEL, h->param.i_width, h->param.i_height );
             h->mc.plane_copy( dst->plane[2], dst->i_stride[2], (pixel*)pix[2],
-                              stride[2]/sizeof(pixel), h->param.i_width, h->param.i_height );
+                              stride[2]/SIZEOF_PIXEL, h->param.i_width, h->param.i_height );
         }
     }
     return 0;
 }
 
-static void ALWAYS_INLINE pixel_memset( pixel *dst, pixel *src, int len, int size )
+static ALWAYS_INLINE void pixel_memset( pixel *dst, pixel *src, int len, int size )
 {
     uint8_t *dstp = (uint8_t*)dst;
     uint32_t v1 = *src;
@@ -535,24 +529,24 @@ static void ALWAYS_INLINE pixel_memset( pixel *dst, pixel *src, int len, int siz
     }
 }
 
-static void ALWAYS_INLINE plane_expand_border( pixel *pix, int i_stride, int i_width, int i_height, int i_padh, int i_padv, int b_pad_top, int b_pad_bottom, int b_chroma )
+static ALWAYS_INLINE void plane_expand_border( pixel *pix, int i_stride, int i_width, int i_height, int i_padh, int i_padv, int b_pad_top, int b_pad_bottom, int b_chroma )
 {
 #define PPIXEL(x, y) ( pix + (x) + (y)*i_stride )
     for( int y = 0; y < i_height; y++ )
     {
         /* left band */
-        pixel_memset( PPIXEL(-i_padh, y), PPIXEL(0, y), i_padh>>b_chroma, sizeof(pixel)<<b_chroma );
+        pixel_memset( PPIXEL(-i_padh, y), PPIXEL(0, y), i_padh>>b_chroma, SIZEOF_PIXEL<<b_chroma );
         /* right band */
-        pixel_memset( PPIXEL(i_width, y), PPIXEL(i_width-1-b_chroma, y), i_padh>>b_chroma, sizeof(pixel)<<b_chroma );
+        pixel_memset( PPIXEL(i_width, y), PPIXEL(i_width-1-b_chroma, y), i_padh>>b_chroma, SIZEOF_PIXEL<<b_chroma );
     }
     /* upper band */
     if( b_pad_top )
         for( int y = 0; y < i_padv; y++ )
-            memcpy( PPIXEL(-i_padh, -y-1), PPIXEL(-i_padh, 0), (i_width+2*i_padh) * sizeof(pixel) );
+            memcpy( PPIXEL(-i_padh, -y-1), PPIXEL(-i_padh, 0), (i_width+2*i_padh) * SIZEOF_PIXEL );
     /* lower band */
     if( b_pad_bottom )
         for( int y = 0; y < i_padv; y++ )
-            memcpy( PPIXEL(-i_padh, i_height+y), PPIXEL(-i_padh, i_height-1), (i_width+2*i_padh) * sizeof(pixel) );
+            memcpy( PPIXEL(-i_padh, i_height+y), PPIXEL(-i_padh, i_height-1), (i_width+2*i_padh) * SIZEOF_PIXEL );
 #undef PPIXEL
 }
 
@@ -656,14 +650,14 @@ void x264_frame_expand_border_mod16( x264_t *h, x264_frame_t *frame )
             for( int y = 0; y < i_height; y++ )
                 pixel_memset( &frame->plane[i][y*frame->i_stride[i] + i_width],
                               &frame->plane[i][y*frame->i_stride[i] + i_width - 1-h_shift],
-                              i_padx>>h_shift, sizeof(pixel)<<h_shift );
+                              i_padx>>h_shift, SIZEOF_PIXEL<<h_shift );
         }
         if( i_pady )
         {
             for( int y = i_height; y < i_height + i_pady; y++ )
                 memcpy( &frame->plane[i][y*frame->i_stride[i]],
                         &frame->plane[i][(i_height-(~y&PARAM_INTERLACED)-1)*frame->i_stride[i]],
-                        (i_width + i_padx) * sizeof(pixel) );
+                        (i_width + i_padx) * SIZEOF_PIXEL );
         }
     }
 }
@@ -678,7 +672,7 @@ void x264_expand_border_mbpair( x264_t *h, int mb_x, int mb_y )
         int pady = (h->mb.i_mb_height * 16 - h->param.i_height) >> v_shift;
         pixel *fenc = h->fenc->plane[i] + 16*mb_x;
         for( int y = height; y < height + pady; y++ )
-            memcpy( fenc + y*stride, fenc + (height-1)*stride, 16*sizeof(pixel) );
+            memcpy( fenc + y*stride, fenc + (height-1)*stride, 16*SIZEOF_PIXEL );
     }
 }
 
@@ -691,12 +685,14 @@ void x264_frame_cond_broadcast( x264_frame_t *frame, int i_lines_completed )
     x264_pthread_mutex_unlock( &frame->mutex );
 }
 
-void x264_frame_cond_wait( x264_frame_t *frame, int i_lines_completed )
+int x264_frame_cond_wait( x264_frame_t *frame, int i_lines_completed )
 {
+    int completed;
     x264_pthread_mutex_lock( &frame->mutex );
-    while( frame->i_lines_completed < i_lines_completed )
+    while( (completed = frame->i_lines_completed) < i_lines_completed && i_lines_completed >= 0 )
         x264_pthread_cond_wait( &frame->cv, &frame->mutex );
     x264_pthread_mutex_unlock( &frame->mutex );
+    return completed;
 }
 
 void x264_threadslice_cond_broadcast( x264_t *h, int pass )

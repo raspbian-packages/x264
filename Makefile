@@ -8,6 +8,9 @@ vpath %.S $(SRCPATH)
 vpath %.asm $(SRCPATH)
 vpath %.rc $(SRCPATH)
 
+CFLAGS += $(CFLAGSPROF)
+LDFLAGS += $(LDFLAGSPROF)
+
 GENERATED =
 
 all: default
@@ -27,8 +30,8 @@ SRCS_X = common/mc.c common/predict.c common/pixel.c common/macroblock.c \
 
 SRCS_8 =
 
-SRCCLI = x264.c input/input.c input/timecode.c input/raw.c input/y4m.c \
-         output/raw.c output/matroska.c output/matroska_ebml.c \
+SRCCLI = x264.c autocomplete.c input/input.c input/timecode.c input/raw.c \
+         input/y4m.c output/raw.c output/matroska.c output/matroska_ebml.c \
          output/flv.c output/flv_bytestream.c filters/filters.c \
          filters/video/video.c filters/video/source.c filters/video/internal.c \
          filters/video/resize.c filters/video/fix_vfr_pts.c \
@@ -52,11 +55,6 @@ OBJCHK_10 =
 OBJEXAMPLE =
 
 CONFIG := $(shell cat config.h)
-
-# GPL-only files
-ifneq ($(findstring HAVE_GPL 1, $(CONFIG)),)
-SRCCLI +=
-endif
 
 # Optional module sources
 ifneq ($(findstring HAVE_AVS 1, $(CONFIG)),)
@@ -251,6 +249,8 @@ $(LIBX264): $(GENERATED) .depend $(OBJS) $(OBJASM)
 $(SONAME): $(GENERATED) .depend $(OBJS) $(OBJASM) $(OBJSO)
 	$(LD)$@ $(OBJS) $(OBJASM) $(OBJSO) $(SOFLAGS) $(LDFLAGS)
 
+$(IMPLIBNAME): $(SONAME)
+
 ifneq ($(EXE),)
 .PHONY: x264 checkasm8 checkasm10 example
 x264: x264$(EXE)
@@ -270,6 +270,9 @@ checkasm10$(EXE): $(GENERATED) .depend $(OBJCHK) $(OBJCHK_10) $(LIBX264)
 
 example$(EXE): $(GENERATED) .depend $(OBJEXAMPLE) $(LIBX264)
 	$(LD)$@ $(OBJEXAMPLE) $(LIBX264) $(LDFLAGS)
+
+$(OBJS) $(OBJSO): CFLAGS += $(CFLAGSSO)
+$(OBJCLI): CFLAGS += $(CFLAGSCLI)
 
 $(OBJS) $(OBJASM) $(OBJSO) $(OBJCLI) $(OBJCHK) $(OBJCHK_8) $(OBJCHK_10) $(OBJEXAMPLE): .depend
 
@@ -341,7 +344,7 @@ ifneq ($(wildcard .depend),)
 include .depend
 endif
 
-OBJPROF = $(OBJS) $(OBJCLI)
+OBJPROF = $(OBJS) $(OBJSO) $(OBJCLI)
 # These should cover most of the important codepaths
 OPT0 = --crf 30 -b1 -m1 -r1 --me dia --no-cabac --direct temporal --ssim --no-weightb
 OPT1 = --crf 16 -b2 -m3 -r3 --me hex --no-8x8dct --direct spatial --no-dct-decimate -t0  --slice-max-mbs 50
@@ -358,9 +361,8 @@ fprofiled:
 	@echo 'where infiles are anything that x264 understands,'
 	@echo 'i.e. YUV with resolution in the filename, y4m, or avisynth.'
 else
-fprofiled:
-	$(MAKE) clean
-	$(MAKE) x264$(EXE) CFLAGS="$(CFLAGS) $(PROF_GEN_CC)" LDFLAGS="$(LDFLAGS) $(PROF_GEN_LD)"
+fprofiled: clean
+	$(MAKE) x264$(EXE) CFLAGSPROF="$(PROF_GEN_CC)" LDFLAGSPROF="$(PROF_GEN_LD)"
 	$(foreach V, $(VIDS), $(foreach I, 0 1 2 3 4 5 6 7, ./x264$(EXE) $(OPT$I) --threads 1 $(V) -o $(DEVNULL) ;))
 ifeq ($(COMPILER),CL)
 # Because Visual Studio timestamps the object files within the PGD, it fails to build if they change - only the executable should be deleted
@@ -368,7 +370,7 @@ ifeq ($(COMPILER),CL)
 else
 	rm -f $(OBJPROF)
 endif
-	$(MAKE) CFLAGS="$(CFLAGS) $(PROF_USE_CC)" LDFLAGS="$(LDFLAGS) $(PROF_USE_LD)"
+	$(MAKE) CFLAGSPROF="$(PROF_USE_CC)" LDFLAGSPROF="$(PROF_USE_LD)"
 	rm -f $(OBJPROF:%.o=%.gcda) $(OBJPROF:%.o=%.gcno) *.dyn pgopti.dpi pgopti.dpi.lock *.pgd *.pgc
 endif
 
@@ -388,18 +390,17 @@ install-cli: cli
 	$(INSTALL) x264$(EXE) $(DESTDIR)$(bindir)
 
 install-lib-dev:
-	$(INSTALL) -d $(DESTDIR)$(includedir)
-	$(INSTALL) -d $(DESTDIR)$(libdir)
-	$(INSTALL) -d $(DESTDIR)$(libdir)/pkgconfig
-	$(INSTALL) -m 644 $(SRCPATH)/x264.h $(DESTDIR)$(includedir)
-	$(INSTALL) -m 644 x264_config.h $(DESTDIR)$(includedir)
+	$(INSTALL) -d $(DESTDIR)$(includedir) $(DESTDIR)$(libdir)/pkgconfig
+	$(INSTALL) -m 644 $(SRCPATH)/x264.h x264_config.h $(DESTDIR)$(includedir)
 	$(INSTALL) -m 644 x264.pc $(DESTDIR)$(libdir)/pkgconfig
 
 install-lib-static: lib-static install-lib-dev
+	$(INSTALL) -d $(DESTDIR)$(libdir)
 	$(INSTALL) -m 644 $(LIBX264) $(DESTDIR)$(libdir)
 	$(if $(RANLIB), $(RANLIB) $(DESTDIR)$(libdir)/$(LIBX264))
 
 install-lib-shared: lib-shared install-lib-dev
+	$(INSTALL) -d $(DESTDIR)$(libdir)
 ifneq ($(IMPLIBNAME),)
 	$(INSTALL) -d $(DESTDIR)$(bindir)
 	$(INSTALL) -m 755 $(SONAME) $(DESTDIR)$(bindir)
@@ -418,7 +419,5 @@ else ifneq ($(SONAME),)
 	rm -f $(DESTDIR)$(libdir)/$(SONAME) $(DESTDIR)$(libdir)/libx264.$(SOSUFFIX)
 endif
 
-etags: TAGS
-
-TAGS:
+etags TAGS:
 	etags $(SRCS) $(SRCS_X) $(SRCS_8)

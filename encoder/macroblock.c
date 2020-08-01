@@ -1,7 +1,7 @@
 /*****************************************************************************
  * macroblock.c: macroblock encoding
  *****************************************************************************
- * Copyright (C) 2003-2018 x264 project
+ * Copyright (C) 2003-2020 x264 project
  *
  * Authors: Laurent Aimar <fenrir@via.ecp.fr>
  *          Loren Merritt <lorenm@u.washington.edu>
@@ -530,8 +530,8 @@ void x264_predict_lossless_chroma( x264_t *h, int i_mode )
     {
         h->mc.copy[PIXEL_8x8]( h->mb.pic.p_fdec[1], FDEC_STRIDE, h->mb.pic.p_fenc[1]-FENC_STRIDE, FENC_STRIDE, height );
         h->mc.copy[PIXEL_8x8]( h->mb.pic.p_fdec[2], FDEC_STRIDE, h->mb.pic.p_fenc[2]-FENC_STRIDE, FENC_STRIDE, height );
-        memcpy( h->mb.pic.p_fdec[1], h->mb.pic.p_fdec[1]-FDEC_STRIDE, 8*sizeof(pixel) );
-        memcpy( h->mb.pic.p_fdec[2], h->mb.pic.p_fdec[2]-FDEC_STRIDE, 8*sizeof(pixel) );
+        memcpy( h->mb.pic.p_fdec[1], h->mb.pic.p_fdec[1]-FDEC_STRIDE, 8*SIZEOF_PIXEL );
+        memcpy( h->mb.pic.p_fdec[2], h->mb.pic.p_fdec[2]-FDEC_STRIDE, 8*SIZEOF_PIXEL );
     }
     else if( i_mode == I_PRED_CHROMA_H )
     {
@@ -560,7 +560,7 @@ void x264_predict_lossless_4x4( x264_t *h, pixel *p_dst, int p, int idx, int i_m
     if( i_mode == I_PRED_4x4_V )
     {
         h->mc.copy[PIXEL_4x4]( p_dst, FDEC_STRIDE, p_src-stride, stride, 4 );
-        memcpy( p_dst, p_dst-FDEC_STRIDE, 4*sizeof(pixel) );
+        memcpy( p_dst, p_dst-FDEC_STRIDE, 4*SIZEOF_PIXEL );
     }
     else if( i_mode == I_PRED_4x4_H )
     {
@@ -580,7 +580,7 @@ void x264_predict_lossless_8x8( x264_t *h, pixel *p_dst, int p, int idx, int i_m
     if( i_mode == I_PRED_8x8_V )
     {
         h->mc.copy[PIXEL_8x8]( p_dst, FDEC_STRIDE, p_src-stride, stride, 8 );
-        memcpy( p_dst, &edge[16], 8*sizeof(pixel) );
+        memcpy( p_dst, &edge[16], 8*SIZEOF_PIXEL );
     }
     else if( i_mode == I_PRED_8x8_H )
     {
@@ -600,7 +600,7 @@ void x264_predict_lossless_16x16( x264_t *h, int p, int i_mode )
     if( i_mode == I_PRED_16x16_V )
     {
         h->mc.copy[PIXEL_16x16]( p_dst, FDEC_STRIDE, h->mb.pic.p_fenc_plane[p]-stride, stride, 16 );
-        memcpy( p_dst, p_dst-FDEC_STRIDE, 16*sizeof(pixel) );
+        memcpy( p_dst, p_dst-FDEC_STRIDE, 16*SIZEOF_PIXEL );
     }
     else if( i_mode == I_PRED_16x16_H )
     {
@@ -975,8 +975,10 @@ void x264_macroblock_encode( x264_t *h )
 {
     if( CHROMA444 )
         macroblock_encode_internal( h, 3, 0 );
-    else
+    else if( CHROMA_FORMAT )
         macroblock_encode_internal( h, 1, 1 );
+    else
+        macroblock_encode_internal( h, 1, 0 );
 }
 
 /*****************************************************************************
@@ -1126,12 +1128,14 @@ static ALWAYS_INLINE int macroblock_probe_skip_internal( x264_t *h, int b_bidir,
 
 int x264_macroblock_probe_skip( x264_t *h, int b_bidir )
 {
-    if( CHROMA_FORMAT == CHROMA_444 )
-        return macroblock_probe_skip_internal( h, b_bidir, 3, CHROMA_444 );
+    if( CHROMA_FORMAT == CHROMA_420 )
+        return macroblock_probe_skip_internal( h, b_bidir, 1, CHROMA_420 );
     else if( CHROMA_FORMAT == CHROMA_422 )
         return macroblock_probe_skip_internal( h, b_bidir, 1, CHROMA_422 );
+    else if( CHROMA_FORMAT == CHROMA_444 )
+        return macroblock_probe_skip_internal( h, b_bidir, 3, CHROMA_444 );
     else
-        return macroblock_probe_skip_internal( h, b_bidir, 1, CHROMA_420 );
+        return macroblock_probe_skip_internal( h, b_bidir, 1, CHROMA_400 );
 }
 
 /****************************************************************************
@@ -1365,12 +1369,14 @@ static ALWAYS_INLINE void macroblock_encode_p8x8_internal( x264_t *h, int i8, in
 
 void x264_macroblock_encode_p8x8( x264_t *h, int i8 )
 {
-    if( CHROMA444 )
-        macroblock_encode_p8x8_internal( h, i8, 3, CHROMA_444 );
+    if( CHROMA_FORMAT == CHROMA_420 )
+        macroblock_encode_p8x8_internal( h, i8, 1, CHROMA_420 );
     else if( CHROMA_FORMAT == CHROMA_422 )
         macroblock_encode_p8x8_internal( h, i8, 1, CHROMA_422 );
+    else if( CHROMA_FORMAT == CHROMA_444 )
+        macroblock_encode_p8x8_internal( h, i8, 3, CHROMA_444 );
     else
-        macroblock_encode_p8x8_internal( h, i8, 1, CHROMA_420 );
+        macroblock_encode_p8x8_internal( h, i8, 1, CHROMA_400 );
 }
 
 /*****************************************************************************

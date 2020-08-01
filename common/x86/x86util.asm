@@ -1,7 +1,7 @@
 ;*****************************************************************************
 ;* x86util.asm: x86 utility macros
 ;*****************************************************************************
-;* Copyright (C) 2008-2018 x264 project
+;* Copyright (C) 2008-2020 x264 project
 ;*
 ;* Authors: Holger Lubitz <holger@lubitz.org>
 ;*          Loren Merritt <lorenm@u.washington.edu>
@@ -584,8 +584,10 @@
     %elif %1==2
         %if mmsize==8
             SBUTTERFLY dq, %3, %4, %5
-        %else
+        %elif %0==6
             TRANS q, ORDER, %3, %4, %5, %6
+        %else
+            TRANS q, ORDER, %3, %4, %5
         %endif
     %elif %1==4
         SBUTTERFLY qdq, %3, %4, %5
