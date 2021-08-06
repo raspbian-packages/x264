@@ -1,4 +1,4 @@
-x264 (2:0.160.3011+gitcde9a93-2+rpi1) bullseye-staging; urgency=medium
+x264 (2:0.160.3011+gitcde9a93-2.1+rpi1) bullseye-staging; urgency=medium
 
   [Changes introduced in 2:0.142.2431+gita5831aa-1+rpi2 by Peter Michael Green]
   * Revert previous raspbian changes (not all of which were mentioned
@@ -6,7 +6,14 @@ x264 (2:0.160.3011+gitcde9a93-2+rpi1) bullseye-staging; urgency=medium
   * Pass --disable-asm for static build to prevent it being
     armv7/neon contaminated.
 
- -- Raspbian forward porter <root@raspbian.org>  Sat, 01 Aug 2020 10:26:18 +0000
+ -- Raspbian forward porter <root@raspbian.org>  Fri, 06 Aug 2021 23:42:04 +0000
+
+x264 (2:0.160.3011+gitcde9a93-2.1) unstable; urgency=medium
+
+  * Non-maintainer upload.
+  * Backport upstream fix to support GPAC >= 0.8.0. (Closes: #975441)
+
+ -- Adrian Bunk <bunk@debian.org>  Thu, 15 Jul 2021 15:06:22 +0300
 
 x264 (2:0.160.3011+gitcde9a93-2) unstable; urgency=medium
 
