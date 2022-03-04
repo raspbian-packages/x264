@@ -1,7 +1,7 @@
 /*****************************************************************************
  * encoder.c: top-level encoder functions
  *****************************************************************************
- * Copyright (C) 2003-2020 x264 project
+ * Copyright (C) 2003-2021 x264 project
  *
  * Authors: Laurent Aimar <fenrir@via.ecp.fr>
  *          Loren Merritt <lorenm@u.washington.edu>
@@ -637,6 +637,41 @@ static int validate_parameters( x264_t *h, int b_open )
         x264_log( h, X264_LOG_ERROR, "cropped resolution %dx%d not compatible with tile format frame packing\n",
                   h->param.i_width - h->param.crop_rect.i_left - h->param.crop_rect.i_right,
                   h->param.i_height - h->param.crop_rect.i_top - h->param.crop_rect.i_bottom );
+        return -1;
+    }
+
+    if( h->param.mastering_display.b_mastering_display )
+    {
+        if( h->param.mastering_display.i_green_x > UINT16_MAX || h->param.mastering_display.i_green_x < 0 ||
+            h->param.mastering_display.i_green_y > UINT16_MAX || h->param.mastering_display.i_green_y < 0 ||
+            h->param.mastering_display.i_blue_x > UINT16_MAX || h->param.mastering_display.i_blue_x < 0 ||
+            h->param.mastering_display.i_blue_y > UINT16_MAX || h->param.mastering_display.i_blue_y < 0 ||
+            h->param.mastering_display.i_red_x > UINT16_MAX || h->param.mastering_display.i_red_x < 0 ||
+            h->param.mastering_display.i_red_y > UINT16_MAX || h->param.mastering_display.i_red_y < 0 ||
+            h->param.mastering_display.i_white_x > UINT16_MAX || h->param.mastering_display.i_white_x < 0 ||
+            h->param.mastering_display.i_white_y > UINT16_MAX || h->param.mastering_display.i_white_y < 0 )
+        {
+            x264_log( h, X264_LOG_ERROR, "mastering display xy coordinates out of range [0,%u]\n", UINT16_MAX );
+            return -1;
+        }
+        if( h->param.mastering_display.i_display_max > UINT32_MAX || h->param.mastering_display.i_display_max < 0 ||
+            h->param.mastering_display.i_display_min > UINT32_MAX || h->param.mastering_display.i_display_min < 0 )
+        {
+            x264_log( h, X264_LOG_ERROR, "mastering display brightness out of range [0,%u]\n", UINT32_MAX );
+            return -1;
+        }
+        if( h->param.mastering_display.i_display_min == 50000 && h->param.mastering_display.i_display_max == 50000 )
+        {
+            x264_log( h, X264_LOG_ERROR, "mastering display min and max brightness cannot both be 50000\n" );
+            return -1;
+        }
+    }
+
+    if( h->param.content_light_level.b_cll &&
+        (h->param.content_light_level.i_max_cll > UINT16_MAX || h->param.content_light_level.i_max_cll < 0 ||
+         h->param.content_light_level.i_max_fall > UINT16_MAX || h->param.content_light_level.i_max_fall < 0) )
+    {
+        x264_log( h, X264_LOG_ERROR, "content light levels out of range [0,%u]\n", UINT16_MAX );
         return -1;
     }
 
@@ -1450,7 +1485,7 @@ static void set_aspect_ratio( x264_t *h, x264_param_t *param, int initial )
 /****************************************************************************
  * x264_encoder_open:
  ****************************************************************************/
-x264_t *x264_encoder_open( x264_param_t *param )
+x264_t *x264_encoder_open( x264_param_t *param, void *api )
 {
     x264_t *h;
     char buf[1000], *p;
@@ -1460,9 +1495,30 @@ x264_t *x264_encoder_open( x264_param_t *param )
 
     /* Create a copy of param */
     memcpy( &h->param, param, sizeof(x264_param_t) );
+    h->param.opaque = NULL;
+    h->param.param_free = NULL;
+
+    if( h->param.psz_cqm_file )
+        CHECKED_PARAM_STRDUP( h->param.psz_cqm_file, &h->param, h->param.psz_cqm_file );
+    if( h->param.psz_dump_yuv )
+        CHECKED_PARAM_STRDUP( h->param.psz_dump_yuv, &h->param, h->param.psz_dump_yuv );
+    if( h->param.rc.psz_stat_out )
+        CHECKED_PARAM_STRDUP( h->param.rc.psz_stat_out, &h->param, h->param.rc.psz_stat_out );
+    if( h->param.rc.psz_stat_in )
+        CHECKED_PARAM_STRDUP( h->param.rc.psz_stat_in, &h->param, h->param.rc.psz_stat_in );
+    if( h->param.rc.psz_zones )
+        CHECKED_PARAM_STRDUP( h->param.rc.psz_zones, &h->param, h->param.rc.psz_zones );
+    if( h->param.psz_clbin_file )
+        CHECKED_PARAM_STRDUP( h->param.psz_clbin_file, &h->param, h->param.psz_clbin_file );
 
     if( param->param_free )
+    {
+        x264_param_cleanup( param );
         param->param_free( param );
+    }
+
+    /* Save pointer to bit depth independent interface */
+    h->api = api;
 
 #if HAVE_INTEL_DISPATCHER
     x264_intel_dispatcher_override();
@@ -1480,11 +1536,6 @@ x264_t *x264_encoder_open( x264_param_t *param )
     if( h->param.psz_cqm_file )
         if( x264_cqm_parse_file( h, h->param.psz_cqm_file ) < 0 )
             goto fail;
-
-    if( h->param.rc.psz_stat_out )
-        h->param.rc.psz_stat_out = strdup( h->param.rc.psz_stat_out );
-    if( h->param.rc.psz_stat_in )
-        h->param.rc.psz_stat_in = strdup( h->param.rc.psz_stat_in );
 
     x264_reduce_fraction( &h->param.i_fps_num, &h->param.i_fps_den );
     x264_reduce_fraction( &h->param.i_timebase_num, &h->param.i_timebase_den );
@@ -1771,11 +1822,12 @@ x264_t *x264_encoder_open( x264_param_t *param )
                           h->sps->i_profile_idc == PROFILE_HIGH422 ?
                               (h->sps->b_constraint_set3 ? "High 4:2:2 Intra" : "High 4:2:2") :
                           h->sps->b_constraint_set3 ? "High 4:4:4 Intra" : "High 4:4:4 Predictive";
-    char level[4];
-    snprintf( level, sizeof(level), "%d.%d", h->sps->i_level_idc/10, h->sps->i_level_idc%10 );
+    char level[16];
     if( h->sps->i_level_idc == 9 || ( h->sps->i_level_idc == 11 && h->sps->b_constraint_set3 &&
         (h->sps->i_profile_idc == PROFILE_BASELINE || h->sps->i_profile_idc == PROFILE_MAIN) ) )
         strcpy( level, "1b" );
+    else
+        snprintf( level, sizeof(level), "%d.%d", h->sps->i_level_idc / 10, h->sps->i_level_idc % 10 );
 
     static const char * const subsampling[4] = { "4:0:0", "4:2:0", "4:2:2", "4:4:4" };
     x264_log( h, X264_LOG_INFO, "profile %s, level %s, %s, %d-bit\n",
@@ -1801,6 +1853,9 @@ static int encoder_try_reconfig( x264_t *h, x264_param_t *param, int *rc_reconfi
     COPY( i_deblocking_filter_alphac0 );
     COPY( i_deblocking_filter_beta );
     COPY( i_frame_packing );
+    COPY( mastering_display );
+    COPY( content_light_level );
+    COPY( i_alternative_transfer );
     COPY( analyse.inter );
     COPY( analyse.intra );
     COPY( analyse.i_direct_mv_pred );
@@ -1900,6 +1955,7 @@ int x264_encoder_reconfig( x264_t *h, x264_param_t *param )
 void x264_encoder_parameters( x264_t *h, x264_param_t *param )
 {
     memcpy( param, &h->thread[h->i_thread_phase]->param, sizeof(x264_param_t) );
+    param->opaque = NULL;
 }
 
 /* internal usage */
@@ -1941,7 +1997,7 @@ static int nal_end( x264_t *h )
      * While undefined padding wouldn't actually affect the output, it makes valgrind unhappy. */
     memset( end, 0xff, 64 );
     if( h->param.nalu_process )
-        h->param.nalu_process( h, nal, h->fenc->opaque );
+        h->param.nalu_process( (x264_t *)h->api, nal, h->fenc->opaque );
     h->out.i_nal++;
 
     return nal_check_buffer( h );
@@ -2168,14 +2224,14 @@ static void weighted_pred_init( x264_t *h )
                     assert( h->sh.weight[j][i].i_denom == denom );
                     if( !i )
                     {
-                        h->fenc->weighted[j] = h->mb.p_weight_buf[buffer_next++] + h->fenc->i_stride[0] * i_padv + PADH;
+                        h->fenc->weighted[j] = h->mb.p_weight_buf[buffer_next++] + h->fenc->i_stride[0] * i_padv + PADH_ALIGN;
                         //scale full resolution frame
                         if( h->param.i_threads == 1 )
                         {
-                            pixel *src = h->fref[0][j]->filtered[0][0] - h->fref[0][j]->i_stride[0]*i_padv - PADH;
-                            pixel *dst = h->fenc->weighted[j] - h->fenc->i_stride[0]*i_padv - PADH;
+                            pixel *src = h->fref[0][j]->filtered[0][0] - h->fref[0][j]->i_stride[0]*i_padv - PADH_ALIGN;
+                            pixel *dst = h->fenc->weighted[j] - h->fenc->i_stride[0]*i_padv - PADH_ALIGN;
                             int stride = h->fenc->i_stride[0];
-                            int width = h->fenc->i_width[0] + PADH*2;
+                            int width = h->fenc->i_width[0] + PADH2;
                             int height = h->fenc->i_lines[0] + i_padv*2;
                             x264_weight_scale_plane( h, dst, stride, src, stride, width, height, &h->sh.weight[j][0] );
                             h->fenc->i_lines_weighted = height;
@@ -3395,6 +3451,7 @@ int     x264_encoder_encode( x264_t *h,
         x264_encoder_reconfig_apply( h, h->fenc->param );
         if( h->fenc->param->param_free )
         {
+            x264_param_cleanup( h->fenc->param );
             h->fenc->param->param_free( h->fenc->param );
             h->fenc->param = NULL;
         }
@@ -3672,21 +3729,39 @@ int     x264_encoder_encode( x264_t *h,
                 return -1;
             overhead += h->out.nal[h->out.i_nal-1].i_payload + SEI_OVERHEAD;
         }
+
+        if( h->param.mastering_display.b_mastering_display )
+        {
+            nal_start( h, NAL_SEI, NAL_PRIORITY_DISPOSABLE );
+            x264_sei_mastering_display_write( h, &h->out.bs );
+            if( nal_end( h ) )
+                return -1;
+            overhead += h->out.nal[h->out.i_nal-1].i_payload + SEI_OVERHEAD;
+        }
+
+        if( h->param.content_light_level.b_cll )
+        {
+            nal_start( h, NAL_SEI, NAL_PRIORITY_DISPOSABLE );
+            x264_sei_content_light_level_write( h, &h->out.bs );
+            if( nal_end( h ) )
+                return -1;
+            overhead += h->out.nal[h->out.i_nal-1].i_payload + SEI_OVERHEAD;
+        }
+
+        if( h->param.i_alternative_transfer != 2 )
+        {
+            nal_start( h, NAL_SEI, NAL_PRIORITY_DISPOSABLE );
+            x264_sei_alternative_transfer_write( h, &h->out.bs );
+            if( nal_end( h ) )
+                return -1;
+            overhead += h->out.nal[h->out.i_nal-1].i_payload + SEI_OVERHEAD;
+        }
     }
 
     if( h->param.i_frame_packing >= 0 && (h->fenc->b_keyframe || h->param.i_frame_packing == 5) )
     {
         nal_start( h, NAL_SEI, NAL_PRIORITY_DISPOSABLE );
         x264_sei_frame_packing_write( h, &h->out.bs );
-        if( nal_end( h ) )
-            return -1;
-        overhead += h->out.nal[h->out.i_nal-1].i_payload + SEI_OVERHEAD;
-    }
-
-    if( h->param.i_alternative_transfer != 2 )
-    {
-        nal_start( h, NAL_SEI, NAL_PRIORITY_DISPOSABLE );
-        x264_sei_alternative_transfer_write( h, &h->out.bs );
         if( nal_end( h ) )
             return -1;
         overhead += h->out.nal[h->out.i_nal-1].i_payload + SEI_OVERHEAD;
@@ -4257,14 +4332,14 @@ void    x264_encoder_close  ( x264_t *h )
         int64_t i_i8x8 = SUM3b( h->stat.i_mb_count, I_8x8 );
         int64_t i_intra = i_i8x8 + SUM3b( h->stat.i_mb_count, I_4x4 )
                                  + SUM3b( h->stat.i_mb_count, I_16x16 );
-        int64_t i_all_intra = i_intra + SUM3b( h->stat.i_mb_count, I_PCM);
+        int64_t i_all_intra = i_intra + SUM3b( h->stat.i_mb_count, I_PCM );
         int64_t i_skip = SUM3b( h->stat.i_mb_count, P_SKIP )
                        + SUM3b( h->stat.i_mb_count, B_SKIP );
         const int i_count = h->stat.i_frame_count[SLICE_TYPE_I] +
                             h->stat.i_frame_count[SLICE_TYPE_P] +
                             h->stat.i_frame_count[SLICE_TYPE_B];
         int64_t i_mb_count = (int64_t)i_count * h->mb.i_mb_count;
-        int64_t i_inter = i_mb_count - i_skip - i_intra;
+        int64_t i_inter = i_mb_count - i_skip - i_all_intra;
         const double duration = h->stat.f_frame_duration[SLICE_TYPE_I] +
                                 h->stat.f_frame_duration[SLICE_TYPE_P] +
                                 h->stat.f_frame_duration[SLICE_TYPE_B];
@@ -4279,7 +4354,7 @@ void    x264_encoder_close  ( x264_t *h )
             if( i_skip )
                 fieldstats += sprintf( fieldstats, " skip:%.1f%%", h->stat.i_mb_field[2] * 100.0 / i_skip );
             x264_log( h, X264_LOG_INFO, "field mbs: intra: %.1f%%%s\n",
-                      h->stat.i_mb_field[0] * 100.0 / i_intra, buf );
+                      h->stat.i_mb_field[0] * 100.0 / i_all_intra, buf );
         }
 
         if( h->pps->b_transform_8x8_mode )
@@ -4287,7 +4362,7 @@ void    x264_encoder_close  ( x264_t *h )
             buf[0] = 0;
             if( h->stat.i_mb_count_8x8dct[0] )
                 sprintf( buf, " inter:%.1f%%", 100. * h->stat.i_mb_count_8x8dct[1] / h->stat.i_mb_count_8x8dct[0] );
-            x264_log( h, X264_LOG_INFO, "8x8 transform intra:%.1f%%%s\n", 100. * i_i8x8 / i_intra, buf );
+            x264_log( h, X264_LOG_INFO, "8x8 transform intra:%.1f%%%s\n", 100. * i_i8x8 / X264_MAX( i_intra, 1 ), buf );
         }
 
         if( (h->param.analyse.i_direct_mv_pred == X264_DIRECT_PRED_AUTO ||
@@ -4418,10 +4493,7 @@ void    x264_encoder_close  ( x264_t *h )
     x264_ratecontrol_delete( h );
 
     /* param */
-    if( h->param.rc.psz_stat_out )
-        free( h->param.rc.psz_stat_out );
-    if( h->param.rc.psz_stat_in )
-        free( h->param.rc.psz_stat_in );
+    x264_param_cleanup( &h->param );
 
     x264_cqm_delete( h );
     x264_free( h->nal_buffer );

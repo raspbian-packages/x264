@@ -1,7 +1,7 @@
 /*****************************************************************************
  * lavf.c: libavformat input
  *****************************************************************************
- * Copyright (C) 2009-2020 x264 project
+ * Copyright (C) 2009-2021 x264 project
  *
  * Authors: Mike Gurlitz <mike.gurlitz@gmail.com>
  *          Steven Walters <kemuri9@gmail.com>
@@ -28,6 +28,7 @@
 
 #undef DECLARE_ALIGNED
 #include <libavformat/avformat.h>
+#include <libavcodec/avcodec.h>
 #include <libavutil/dict.h>
 #include <libavutil/error.h>
 #include <libavutil/mem.h>
@@ -168,7 +169,6 @@ static int open_file( char *psz_filename, hnd_t *p_handle, video_info_t *info, c
     lavf_hnd_t *h = calloc( 1, sizeof(lavf_hnd_t) );
     if( !h )
         return -1;
-    av_register_all();
     if( !strcmp( psz_filename, "-" ) )
         psz_filename = "pipe:";
 

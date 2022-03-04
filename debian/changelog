@@ -1,4 +1,4 @@
-x264 (2:0.160.3011+gitcde9a93-2.1+rpi1) bullseye-staging; urgency=medium
+x264 (2:0.163.3060+git5db6aa6-2+rpi1) bookworm-staging; urgency=medium
 
   [Changes introduced in 2:0.142.2431+gita5831aa-1+rpi2 by Peter Michael Green]
   * Revert previous raspbian changes (not all of which were mentioned
@@ -6,7 +6,35 @@ x264 (2:0.160.3011+gitcde9a93-2.1+rpi1) bullseye-staging; urgency=medium
   * Pass --disable-asm for static build to prevent it being
     armv7/neon contaminated.
 
- -- Raspbian forward porter <root@raspbian.org>  Fri, 06 Aug 2021 23:42:04 +0000
+ -- Raspbian forward porter <root@raspbian.org>  Fri, 04 Mar 2022 10:57:32 +0000
+
+x264 (2:0.163.3060+git5db6aa6-2) unstable; urgency=medium
+
+  * Team upload
+  * Upload to unstable
+
+ -- Sebastian Ramacher <sramacher@debian.org>  Sat, 26 Feb 2022 18:21:41 +0100
+
+x264 (2:0.163.3060+git5db6aa6-1) experimental; urgency=medium
+
+  [ Debian Janitor ]
+  * Use secure URI in Homepage field.
+  * Set upstream metadata fields: Repository.
+  * Update standards version to 4.5.1, no changes needed.
+
+  [ Rico Tzschichholz ]
+  * Update to new stable upstream
+  * New upstream version 0.163.3060+git5db6aa6
+  * Update debian/control for soname bump
+  * Drop upstream and obsolete GPAC patches
+  * Add build-dep on pkg-config
+  * Regenerate manpage
+
+  [ Sebastian Ramacher ]
+  * debian/control: Bump Standards-Version
+  * debian/copyright: Bump copyright years
+
+ -- Rico Tzschichholz <ricotz@ubuntu.com>  Fri, 18 Feb 2022 08:35:05 +0100
 
 x264 (2:0.160.3011+gitcde9a93-2.1) unstable; urgency=medium
 

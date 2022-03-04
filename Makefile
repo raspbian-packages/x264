@@ -7,6 +7,7 @@ vpath %.h $(SRCPATH)
 vpath %.S $(SRCPATH)
 vpath %.asm $(SRCPATH)
 vpath %.rc $(SRCPATH)
+vpath %.manifest $(SRCPATH)
 
 CFLAGS += $(CFLAGSPROF)
 LDFLAGS += $(LDFLAGSPROF)
@@ -312,7 +313,7 @@ $(OBJS) $(OBJASM) $(OBJSO) $(OBJCLI) $(OBJCHK) $(OBJCHK_8) $(OBJCHK_10) $(OBJEXA
 %.dll.o: %.rc x264.h
 	$(RC) $(RCFLAGS)$@ -DDLL $<
 
-%.o: %.rc x264.h
+%.o: %.rc x264.h x264res.manifest
 	$(RC) $(RCFLAGS)$@ $<
 
 .depend: config.mak
@@ -410,6 +411,12 @@ else ifneq ($(SONAME),)
 	$(INSTALL) -m 755 $(SONAME) $(DESTDIR)$(libdir)
 endif
 
+install-bashcompletion:
+ifneq ($(BASHCOMPLETIONSDIR),)
+	$(INSTALL) -d $(DESTDIR)$(BASHCOMPLETIONSDIR)
+	$(INSTALL) -m 644 $(SRCPATH)/tools/bash-autocomplete.sh $(DESTDIR)$(BASHCOMPLETIONSDIR)/x264
+endif
+
 uninstall:
 	rm -f $(DESTDIR)$(includedir)/x264.h $(DESTDIR)$(includedir)/x264_config.h $(DESTDIR)$(libdir)/libx264.a
 	rm -f $(DESTDIR)$(bindir)/x264$(EXE) $(DESTDIR)$(libdir)/pkgconfig/x264.pc
@@ -417,6 +424,9 @@ ifneq ($(IMPLIBNAME),)
 	rm -f $(DESTDIR)$(bindir)/$(SONAME) $(DESTDIR)$(libdir)/$(IMPLIBNAME)
 else ifneq ($(SONAME),)
 	rm -f $(DESTDIR)$(libdir)/$(SONAME) $(DESTDIR)$(libdir)/libx264.$(SOSUFFIX)
+endif
+ifneq ($(BASHCOMPLETIONSDIR),)
+	rm -f $(DESTDIR)$(BASHCOMPLETIONSDIR)/x264
 endif
 
 etags TAGS:
