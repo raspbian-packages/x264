@@ -81,7 +81,7 @@ stages:
 
 build-debian-amd64:
     extends: .build
-    image: registry.videolan.org/x264-debian-unstable:20190404162201
+    image: registry.videolan.org/x264-debian-unstable:20211206140856
     tags:
         - docker
         - amd64
@@ -89,7 +89,7 @@ build-debian-amd64:
 
 build-debian-aarch64:
     extends: .build
-    image: registry.videolan.org/x264-debian-unstable-aarch64:20190716192245
+    image: registry.videolan.org/x264-debian-unstable-aarch64:20211206141032
     tags:
         - docker
         - aarch64
@@ -106,7 +106,7 @@ build-debian-aarch64:
         curl -f -o vlc-contrib-${_TRIPLET}-latest.tar.bz2 ${_CONTRIB_URL}${CONTRIB_NAME}
         bunzip2 vlc-contrib-${_TRIPLET}-latest.tar.bz2
         tar xvf vlc-contrib-${_TRIPLET}-latest.tar
-        sed -i.bak -e "s#@@CONTRIB_PREFIX@@#${LOCAL_INSTALL_DIR}#g" ${PKG_CONFIG_LIBDIR}/*.pc
+        perl -pi -e "s'@@CONTRIB_PREFIX@@'$(sed -e "s/'/\\\\'/g" <<< "${LOCAL_INSTALL_DIR}")'g" ${PKG_CONFIG_LIBDIR}/*.pc
         git clone --depth 1 --branch master https://github.com/l-smash/l-smash.git lsmash
         cd lsmash
         ./configure --prefix="${LOCAL_INSTALL_DIR}" --target-os="${_TRIPLET}" --cross-prefix="${_TRIPLET}-"
@@ -126,7 +126,7 @@ build-win64:
 
 .build-llvm-mingw:
     extends: .build
-    image: registry.videolan.org/vlc-debian-llvm-mingw:20200703084018
+    image: registry.videolan.org/vlc-debian-llvm-mingw:20211020094514
     tags:
         - docker
         - amd64
@@ -154,7 +154,7 @@ build-llvm-mingw-aarch64:
         curl -f -o vlc-contrib-${_TRIPLET}-latest.tar.bz2 ${_CONTRIB_URL}${CONTRIB_NAME}
         bunzip2 vlc-contrib-${_TRIPLET}-latest.tar.bz2
         tar xvf vlc-contrib-${_TRIPLET}-latest.tar
-        sed -i.bak -e "s#@@CONTRIB_PREFIX@@#${LOCAL_INSTALL_DIR}#g" ${PKG_CONFIG_LIBDIR}/*.pc
+        perl -pi -e "s'@@CONTRIB_PREFIX@@'$(sed -e "s/'/\\\\'/g" <<< "${LOCAL_INSTALL_DIR}")'g" ${PKG_CONFIG_LIBDIR}/*.pc
         git clone --depth 1 --branch master https://github.com/l-smash/l-smash.git lsmash
         cd lsmash
         ./configure --prefix="${LOCAL_INSTALL_DIR}" --target-os="${_TRIPLET}" --extra-cflags="${_XCFLAGS}" --extra-ldflags="${_XLDFLAGS}"

@@ -1,7 +1,7 @@
 /*****************************************************************************
  * x264: top-level x264cli functions
  *****************************************************************************
- * Copyright (C) 2003-2021 x264 project
+ * Copyright (C) 2003-2022 x264 project
  *
  * Authors: Loren Merritt <lorenm@u.washington.edu>
  *          Laurent Aimar <fenrir@via.ecp.fr>
@@ -140,7 +140,7 @@ static cli_output_t cli_output;
 /* video filter operation struct */
 static cli_vid_filter_t filter;
 
-const char * const x264_avcintra_class_names[] = { "50", "100", "200", 0 };
+const char * const x264_avcintra_class_names[] = { "50", "100", "200", "300", "480", 0 };
 const char * const x264_cqm_names[] = { "flat", "jvt", 0 };
 const char * const x264_log_level_names[] = { "none", "error", "warning", "info", "debug", 0 };
 const char * const x264_partition_names[] = { "p8x8", "p4x4", "b8x8", "i8x8", "i4x4", "none", "all", 0 };
@@ -495,7 +495,7 @@ static void help( x264_param_t *defaults, int longhelp )
         " .mkv -> Matroska\n"
         " .flv -> Flash Video\n"
         " .mp4 -> MP4 if compiled with GPAC or L-SMASH support (%s)\n"
-        "Output bit depth: %s\n."
+        "Output bit depth: %s\n"
         "\n"
         "Options:\n"
         "\n"
@@ -1302,7 +1302,7 @@ static int init_vid_filters( char *sequence, hnd_t *handle, video_info_t *info, 
 {
     x264_register_vid_filters();
 
-    /* intialize baseline filters */
+    /* initialize baseline filters */
     if( x264_init_vid_filter( "source", handle, &filter, info, param, NULL ) ) /* wrap demuxer into a filter */
         return -1;
     if( x264_init_vid_filter( "resize", handle, &filter, info, param, "normcsp" ) ) /* normalize csps to be of a known/supported format */

@@ -12,7 +12,7 @@ Build-Depends:
  libgpac-dev (>= 0.5.0+svn4288~) <!stage1>,
  nasm (>= 2.13) [any-i386 any-amd64],
  pkg-config
-Standards-Version: 4.5.1
+Standards-Version: 4.6.1
 Vcs-Git: https://salsa.debian.org/multimedia-team/x264.git
 Vcs-Browser: https://salsa.debian.org/multimedia-team/x264
 Homepage: https://www.videolan.org/developers/x264.html
