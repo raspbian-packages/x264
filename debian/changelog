@@ -1,4 +1,4 @@
-x264 (2:0.164.3095+gitbaee400-2+rpi1) bookworm-staging; urgency=medium
+x264 (2:0.164.3095+gitbaee400-3+rpi1) bookworm-staging; urgency=medium
 
   [Changes introduced in 2:0.142.2431+gita5831aa-1+rpi2 by Peter Michael Green]
   * Revert previous raspbian changes (not all of which were mentioned
@@ -6,7 +6,16 @@ x264 (2:0.164.3095+gitbaee400-2+rpi1) bookworm-staging; urgency=medium
   * Pass --disable-asm for static build to prevent it being
     armv7/neon contaminated.
 
- -- Raspbian forward porter <root@raspbian.org>  Tue, 21 Jun 2022 09:15:01 +0000
+ -- Raspbian forward porter <root@raspbian.org>  Sun, 14 May 2023 15:54:07 +0000
+
+x264 (2:0.164.3095+gitbaee400-3) unstable; urgency=medium
+
+  * Team upload
+  * debian/: Disable gpac support
+    gpac is a constant source of security issues. gpac support is disabled so
+    it can be removed from bookworm.
+
+ -- Sebastian Ramacher <sramacher@debian.org>  Wed, 12 Apr 2023 23:37:05 +0200
 
 x264 (2:0.164.3095+gitbaee400-2) unstable; urgency=medium
 

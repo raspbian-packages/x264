@@ -9,7 +9,6 @@ Build-Depends:
  debhelper-compat (= 13),
  libavformat-dev (>= 6:9) <!stage1>,
  libffms2-dev <!stage1>,
- libgpac-dev (>= 0.5.0+svn4288~) <!stage1>,
  nasm (>= 2.13) [any-i386 any-amd64],
  pkg-config
 Standards-Version: 4.6.1

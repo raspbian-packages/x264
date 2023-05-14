@@ -11,14 +11,14 @@ ifneq (,$(filter parallel=%,$(DEB_BUILD_OPTIONS)))
 	MAKEFLAGS += -j$(NUMJOBS)
 endif
 
-common_confflags += --prefix=/usr --libdir=/usr/lib/$(DEB_HOST_MULTIARCH)
+common_confflags += --prefix=/usr --libdir=/usr/lib/$(DEB_HOST_MULTIARCH) --disable-gpac
 
 ifneq ($(DEB_HOST_GNU_TYPE),$(DEB_BUILD_GNU_TYPE))
 common_confflags += --host=$(DEB_HOST_GNU_TYPE) --cross-prefix=$(DEB_HOST_GNU_TYPE)-
 endif
 
 ifneq (,$(filter stage1,$(DEB_BUILD_PROFILES)))
-common_confflags += --disable-avs --disable-ffms --disable-gpac
+common_confflags += --disable-avs --disable-ffms
 endif
 
 # XXX why isn't --enable-visualize used in the static build?
