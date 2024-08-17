@@ -1,1 +1,2 @@
-properly_detect_x32.patch
+0001-properly_detect_x32.patch
+0002-ppc-Fix-incompatible-pointer-type-errors.patch
