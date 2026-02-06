@@ -1,0 +1,134 @@
+#!/usr/bin/make -f
+
+libx264N := libx264-$(shell awk '/define X264_BUILD/{print $$3}' x264.h)
+
+include /usr/share/dpkg/architecture.mk
+
+extra_cflags = $(CFLAGS) $(CPPFLAGS)
+
+export DEB_LDFLAGS_MAINT_STRIP=-Wl,-Bsymbolic-functions
+
+ifneq (,$(filter parallel=%,$(DEB_BUILD_OPTIONS)))
+	NUMJOBS = $(patsubst parallel=%,%,$(filter parallel=%,$(DEB_BUILD_OPTIONS)))
+	MAKEFLAGS += -j$(NUMJOBS)
+endif
+
+common_confflags += --prefix=/usr --libdir=/usr/lib/$(DEB_HOST_MULTIARCH) --disable-gpac
+
+ifneq ($(DEB_HOST_GNU_TYPE),$(DEB_BUILD_GNU_TYPE))
+common_confflags += --host=$(DEB_HOST_GNU_TYPE) --cross-prefix=$(DEB_HOST_GNU_TYPE)-
+endif
+
+ifneq (,$(filter stage1,$(DEB_BUILD_PROFILES)))
+common_confflags += --disable-avs --disable-ffms
+endif
+
+# upstream defaults to forcing a bunch of optimizations on various arches;
+# --disable-asm should disable them all, but then we need to figure out what
+# the toolchain actually targets to turn then back on ourselves if appropriate;
+# also, we try providing an optimized flavor for the arches / toolchain
+# combinations where it makes sense
+
+shared_confflags += \
+	$(common_confflags) \
+	--enable-shared \
+	--system-libx264
+
+opt_confflags += \
+	$(common_confflags) \
+	--enable-shared \
+	--disable-cli \
+	--libdir=$(opt_libdir)
+
+# this is only used for the check_asm macro
+ifeq ($(DEB_BUILD_GNU_TYPE),$(DEB_HOST_GNU_TYPE))
+CC := gcc
+else
+CC := $(DEB_HOST_GNU_TYPE)-gcc
+endif
+
+do_opt := no
+
+# X86 upstream arch, hurd-i386, i386, and kfreebsd-i386 Debian arches; upstream
+# adds -march=i686 and -mfpmath=sse -msse by default and runtime detects MMX,
+# SSE, SSE2 etc.
+ifneq (,$(filter i386 hurd-i386,$(DEB_HOST_ARCH)))
+# build an SSE optimized flavor for i386
+do_opt := yes
+opt_libdir := /usr/lib/$(DEB_HOST_MULTIARCH)/i686/sse2
+shared_confflags += --disable-asm
+endif
+
+# PPC upstream arch, powerpc and ppc64, ppc64el Debian arches; upstream adds -maltivec
+# -mabi=altivec by default
+# XXX upstream: --disable-asm should disable altivec; fixed in
+# 6a443d3cdf338408b1b39e7f336306d2a34703f6
+ifneq (,$(filter powerpc ppc64 ppc64el,$(DEB_HOST_ARCH)))
+shared_confflags += --disable-asm
+opt_confflags += --disable-asm
+endif
+
+# ARM upsteam arch, arm, armeb, and armel Debian arches; upstream prepends -O3
+# -fno-fast-math by default, but that's ok as we override -O and we don't care
+# about -ffast-math which is said to be negligible and buggy by upstream, and
+# appends -mcpu=cortex-a8 -mfpu=neon -mfloat-abi=softfp by default; upstream
+# supports ARMv6t2 with runtime detection of NEON, so if the baseline supports
+# ARMv6t2, use it, otherwise build a NEON opt flavor; note that NEON implies
+# VFP and ARMv7 and hence the flags are ok
+ifeq (armhf,$(DEB_HOST_ARCH))
+# baseline from gcc-15
+extra_cflags += -march=armv6+fp
+shared_confflags += --disable-asm
+opt_confflags += --disable-asm
+endif
+
+%:
+	dh $@
+
+.PHONY: debian/control
+debian/control:
+	sed -e 's/@libx264N@/$(libx264N)/g' $@.in > $@
+
+debian/$(libx264N).install:
+	cp debian/libx264N.install.in $@
+
+override_dh_auto_build:
+	# Build shared lib
+	CFLAGS="$(extra_cflags)" LDFLAGS="$(LDFLAGS)" ./configure $(shared_confflags) \
+	   || ( tail -v -n +0 config.log config.log ; exit 1 )
+	$(MAKE)
+	$(MAKE) install DESTDIR=$(CURDIR)/debian/install/shared
+ifeq ($(do_opt),yes)
+	$(MAKE) distclean
+	# Build opt lib
+	LDFLAGS="$(LDFLAGS)" ./configure $(opt_confflags) \
+	   || ( tail -v -n +0 config.log config.log ; exit 1 )
+	$(MAKE)
+	$(MAKE) install DESTDIR=$(CURDIR)/debian/install/opt
+endif
+
+override_dh_auto_configure:
+	# dh_auto_configure phase handled via dh_auto_build.
+
+override_dh_auto_install:
+	# dh_auto_install phase handled via dh_auto_build.
+
+override_dh_auto_clean: debian/control
+	rm -rf debian/install
+	$(MAKE) -o config.mak distclean
+	dh_clean config.mak2 debian/$(libx264N).install
+
+override_dh_install: debian/$(libx264N).install
+	dh_install --sourcedir=debian/install
+ifeq ($(do_opt),yes)
+	mkdir -p debian/$(libx264N)$(opt_libdir)
+	cp -a debian/install/opt$(opt_libdir)/*.so.* debian/$(libx264N)$(opt_libdir)
+endif
+
+override_dh_missing:
+	dh_missing --list-missing --sourcedir=debian/install
+
+debian/x264.1: build
+	env LD_LIBRARY_PATH="$(LD_LIBRARY_PATH):$(CURDIR)/debian/install/shared/usr/lib/$(DEB_HOST_MULTIARCH)" \
+	help2man -n "fast h264 encoder" -N -s1 -S "Videolan project" -h '--fullhelp' \
+		debian/install/shared/usr/bin/x264 > debian/x264.1
