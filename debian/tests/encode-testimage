@@ -1,0 +1,14 @@
+#!/bin/sh
+# autopkgtest check: Use ffmpeg to produce a 10s test image,
+# and use x264 to encode to H.264 high profile
+
+set -e
+
+cd "$AUTOPKGTEST_TMP"
+
+ffmpeg -y -filter_complex testsrc -t 10 in.avi
+x264 --crf 24 -o out.mkv in.avi
+ffprobe -of ini -show_streams out.mkv | tee avprobe.txt
+grep "^codec_name=h264" avprobe.txt
+grep "^codec_long_name=H.264" avprobe.txt
+grep "^profile=High" avprobe.txt

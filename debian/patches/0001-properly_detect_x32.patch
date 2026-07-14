@@ -1,0 +1,50 @@
+From: Adam Borowski <kilobyte@angband.pl>
+Date: Tue, 30 Jul 2024 15:09:54 +0200
+Subject: Properly detect x32.
+
+As usually, x32 gets mistaken for amd64 (both are x86-64 ABIs after all).
+This version doesn't use any assembly yet, a proper port is needed.
+---
+ common/common.h | 2 +-
+ configure       | 8 ++++++++
+ 2 files changed, 9 insertions(+), 1 deletion(-)
+
+diff --git a/common/common.h b/common/common.h
+index a22e224..6d935c6 100644
+--- a/common/common.h
++++ b/common/common.h
+@@ -804,7 +804,7 @@ static ALWAYS_INLINE int x264_predictor_clip( int16_t (*dst)[2], int16_t (*mvc)[
+     return cnt;
+ }
+ 
+-#if ARCH_X86 || ARCH_X86_64
++#if ARCH_X86 || ARCH_X86_64 || ARCH_X32
+ #include "x86/util.h"
+ #endif
+ 
+diff --git a/configure b/configure
+index 5116bb9..ef51d6a 100755
+--- a/configure
++++ b/configure
+@@ -758,6 +758,10 @@ esac
+ 
+ LDFLAGS="$LDFLAGS $libm"
+ 
++case `$CC -dumpmachine` in
++    *gnux32) host_cpu=x32
++esac
++
+ stack_alignment=4
+ case $host_cpu in
+     i*86)
+@@ -814,6 +818,10 @@ case $host_cpu in
+             ASFLAGS="$ASFLAGS -f elf64"
+         fi
+         ;;
++    x32)
++        ARCH="X32"
++        CFLAGS="$CFLAGS -fPIC"
++        ;;
+     powerpc*)
+         ARCH="PPC"
+         if [ $asm = auto ] ; then
