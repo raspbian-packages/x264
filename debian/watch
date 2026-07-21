@@ -1,1 +1,8 @@
-# x264 currently does not have any releases
+Version: 5
+
+# This requires a manual update of Git-Pretty on a new release, but we are atleast informed about
+# them.
+Mode: git
+Source: https://code.videolan.org/videolan/x264.git
+Matching-Pattern: HEAD
+Git-Pretty: 0.165.3223+git%cd.%h
